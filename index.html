@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#10141d" />
+    <title>Write Code Action — Sai University</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="grain" aria-hidden="true"></div>
+    <div class="loader" aria-hidden="true"><span>W</span><span>C</span><span>A</span></div>
+
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="Write Code Action home"><span>W</span><span>C</span><span>A</span></a>
+      <nav aria-label="Main navigation">
+        <a href="#write">Write</a><a href="#code">Code</a><a href="#action">Action</a>
+      </nav>
+      <button class="join-small" data-open-signup>Join WCA <i>↗</i></button>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-orbit orbit-one"></div><div class="hero-orbit orbit-two"></div>
+        <p class="eyebrow hero-intro">Sai University</p>
+        <h1 id="hero-title"><span>WRITE</span><span>CODE</span><span>ACTION</span></h1>
+        <p class="hero-copy">A club for the people who imagine worlds—and have the nerve to build them.</p>
+        <a class="scroll-cue" href="#write"><span>Begin the story</span><b>↓</b></a>
+      </section>
+
+      <section class="chapter write" id="write" aria-labelledby="write-title">
+        <div class="paper-sun"></div><div class="ink-blot blot-one"></div><div class="ink-blot blot-two"></div>
+        <div class="chapter-count">01 / WRITE</div>
+        <div class="chapter-content">
+          <p class="eyebrow">Every game starts in the margins</p>
+          <h2 id="write-title">Write the<br><em>impossible.</em></h2>
+          <p class="lead">Build stories with stakes, strange worlds, messy heroes and choices worth making. Before there is a line of code, there is a reason to care.</p>
+          <div class="margin-note">Scene I<br><small>What if your idea was the starting point?</small></div>
+        </div>
+        <div class="paper-card" aria-hidden="true">
+          <p>THE FIRST DRAFT</p><div class="scribble"></div><div class="scribble short"></div><div class="scribble"></div>
+          <span>Stories → Worlds</span>
+        </div>
+      </section>
+
+      <section class="chapter code" id="code" aria-labelledby="code-title">
+        <div class="code-grid"></div><div class="scanline"></div>
+        <div class="chapter-count">02 / CODE</div>
+        <div class="chapter-content">
+          <p class="eyebrow">Make the machine listen</p>
+          <h2 id="code-title">Turn <em>ideas</em><br>into systems.</h2>
+          <p class="lead">Learn the craft behind the prompt. Build with AI intelligently, understand the logic beneath it, and shape every tiny rule that makes a game feel alive.</p>
+          <div class="terminal-line"><span>›</span> creative_intent.exe <b>running</b><i>█</i></div>
+        </div>
+        <pre class="code-window" aria-hidden="true"><code><span class="pink">const</span> world = <span class="cyan">createWorld</span>({
+  story: <span class="yellow">"your vision"</span>,
+  players: <span class="purple">infinite</span>,
+  limits: <span class="pink">undefined</span>
+});
+
+world.<span class="cyan">bringToLife</span>();</code></pre>
+      </section>
+
+      <section class="chapter action" id="action" aria-labelledby="action-title">
+        <div class="spotlight left"></div><div class="spotlight right"></div>
+        <div class="curtain curtain-left"></div><div class="curtain curtain-right"></div>
+        <div class="chapter-count">03 / ACTION</div>
+        <div class="chapter-content">
+          <p class="eyebrow">No more ideas left backstage</p>
+          <h2 id="action-title">Now make it<br><em>real.</em></h2>
+          <p class="lead">Screen your game. Stage your story. Pitch it, test it, break it, rebuild it. WCA is where a project earns its applause.</p>
+          <button class="cta" data-open-signup>Take the stage <span>→</span></button>
+        </div>
+        <div class="clapper" aria-hidden="true"><div class="clapper-top"></div><div class="clapper-body"><strong>WCA</strong><small>TAKE 01<br>YOUR STORY</small></div></div>
+        <p class="final-line">WRITE IT. CODE IT. <span>LIVE IT.</span></p>
+      </section>
+
+      <section class="manifesto">
+        <p class="eyebrow">A different kind of programming club</p>
+        <p>Creativity and code were never opposites. We’re here to prove it—with writers, coders, actors, designers, and anyone with a world in their head.</p>
+        <button class="cta light" data-open-signup>Join the first chapter <span>→</span></button>
+      </section>
+    </main>
+
+    <footer><span>WRITE CODE ACTION</span><span>SAI UNIVERSITY · 2026</span><span>MAKE A SCENE.</span></footer>
+
+    <dialog class="signup-dialog" aria-labelledby="signup-title">
+      <button class="close" data-close-signup aria-label="Close sign up">×</button>
+      <div class="signup-art"><span>W</span><span>C</span><span>A</span><p>THE<br>CAST LIST<br>IS OPEN.</p></div>
+      <form id="signup-form">
+        <p class="eyebrow">Join Write Code Action</p>
+        <h2 id="signup-title">Make your<br>entrance.</h2>
+        <label>Choose your username<input id="username" name="username" autocomplete="username" minlength="3" maxlength="24" pattern="[A-Za-z0-9_-]+" placeholder="e.g. pixelpoet" required /></label>
+        <label>Choose a unique password<input id="password" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required /></label>
+        <p class="form-note">For this prototype, accounts are kept only in this browser.</p>
+        <p class="form-message" id="form-message" role="status"></p>
+        <button class="cta form-submit" type="submit">Claim your name <span>→</span></button>
+      </form>
+    </dialog>
+    <script src="app.js"></script>
+  </body>
+</html>

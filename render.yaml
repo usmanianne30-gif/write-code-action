@@ -2,14 +2,14 @@ services:
   - type: web
     name: write-code-action
     runtime: node
-    plan: starter
+    plan: free
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /
     envVars:
       - key: PASSWORD_UNIQUENESS_KEY
         generateValue: true
-    disk:
-      name: wca-member-data
-      mountPath: /opt/render/project/src/data
-      sizeGB: 1
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false

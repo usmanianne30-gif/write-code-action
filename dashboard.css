@@ -1,0 +1,409 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   dashboard.css — WCA member workspace styles
+   All CSS custom properties are sourced from styles.css (already loaded first).
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* ── Layout shell ── */
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--navy);
+}
+
+/* ── Dashboard Header ── */
+.db-header {
+  position: relative;
+  z-index: 10;
+  height: 64px;
+  padding: 0 clamp(1.2rem, 4vw, 3rem);
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  background: rgba(16, 20, 29, 0.92);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(228, 201, 141, 0.12);
+  flex-shrink: 0;
+}
+
+.db-header .brand {
+  font: 700 1.15rem var(--serif);
+  letter-spacing: -.1em;
+  color: var(--cream);
+  text-decoration: none;
+  display: flex;
+  gap: .2rem;
+}
+.db-header .brand span:nth-child(2) { font-style: italic; }
+
+.db-greeting {
+  margin: 0;
+  font: 500 .68rem var(--mono);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba(213, 199, 177, 0.55);
+  flex: 1;
+}
+
+.db-home-link {
+  font: 500 .65rem var(--mono);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: rgba(213, 199, 177, 0.4);
+  text-decoration: none;
+  transition: color .2s;
+}
+.db-home-link:hover { color: var(--cream); }
+
+/* ── Tab Navigation ── */
+.db-tabs {
+  display: flex;
+  gap: 0;
+  background: rgba(16, 20, 29, 0.85);
+  border-bottom: 1px solid rgba(228, 201, 141, 0.12);
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.db-tabs::-webkit-scrollbar { display: none; }
+
+.db-tab {
+  position: relative;
+  padding: .75rem clamp(1.2rem, 3vw, 2.5rem);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: rgba(213, 199, 177, 0.4);
+  font: 500 .68rem var(--mono);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color .2s, border-color .2s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+}
+.db-tab:hover { color: var(--cream); }
+.db-tab.active {
+  color: var(--cream);
+  border-bottom-color: var(--paper);
+}
+
+.db-tab-num {
+  font-size: .55rem;
+  opacity: .5;
+  letter-spacing: .05em;
+}
+
+/* ── Main panels container ── */
+.db-main {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.db-panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .25s ease;
+}
+.db-panel.active {
+  opacity: 1;
+  pointer-events: auto;
+  position: relative;
+}
+
+.db-panel-inner {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: clamp(1rem, 2.5vw, 2rem) clamp(1.2rem, 4vw, 3rem) clamp(1rem, 2.5vw, 2rem);
+  gap: 1rem;
+}
+
+/* Panel deco (shared with landing page) */
+.db-panel-deco {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* ── Panel header (title + save status) ── */
+.db-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.db-panel-title {
+  font: 700 clamp(1.8rem, 4vw, 3.2rem)/.9 var(--serif);
+  letter-spacing: -.06em;
+  margin: .35rem 0 0;
+  color: inherit;
+}
+.db-panel-title em { font-style: italic; }
+
+.db-save-status {
+  font: 500 .62rem var(--mono);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-top: .4rem;
+  min-width: 5rem;
+  text-align: right;
+  color: rgba(213, 199, 177, 0.4);
+  transition: color .3s;
+  flex-shrink: 0;
+}
+.db-save-status.saving { color: rgba(228, 201, 141, 0.7); }
+.db-save-status.saved  { color: #2d7a50; }
+.db-save-status.error  { color: var(--red); }
+
+/* ── Shared editor base ── */
+.db-editor {
+  width: 100%;
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  line-height: 1.7;
+  caret-color: var(--paper);
+}
+
+/* ─────────────────────────────────────────────────────────
+   WRITE panel
+   ───────────────────────────────────────────────────────── */
+.db-panel--write {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.db-panel--write .eyebrow { color: rgba(27, 26, 23, 0.5); }
+.db-panel--write .db-panel-title { color: var(--ink); }
+.db-panel--write .db-save-status { color: rgba(27, 26, 23, 0.35); }
+.db-panel--write .db-save-status.saving { color: rgba(27, 26, 23, 0.6); }
+.db-panel--write .db-save-status.saved  { color: #2d7a50; }
+.db-panel--write .db-save-status.error  { color: var(--red); }
+
+/* Ink blots reused from the landing page */
+.db-panel--write .ink-blot {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(27, 26, 23, 0.06);
+  filter: blur(40px);
+}
+.db-panel--write .blot-one {
+  width: 320px; height: 320px;
+  top: -80px; right: -60px;
+}
+.db-panel--write .blot-two {
+  width: 200px; height: 200px;
+  bottom: 10%; left: 5%;
+}
+.db-panel--write .paper-sun {
+  position: absolute;
+  bottom: -120px; right: 8%;
+  width: 380px; height: 380px;
+  border-radius: 50%;
+  border: 1px solid rgba(27, 26, 23, 0.08);
+}
+
+/* Ruled lines */
+.db-write-area {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+.db-ruled-lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent calc(1.7em - 1px),
+    rgba(27, 26, 23, 0.1) calc(1.7em - 1px),
+    rgba(27, 26, 23, 0.1) 1.7em
+  );
+  background-position: 0 calc(1.7em * 2 + 2px); /* offset below header */
+}
+
+.db-editor--write {
+  font: 400 1.05rem/1.7 var(--serif);
+  color: var(--ink);
+  padding: .25rem 0 2rem;
+  position: relative;
+  z-index: 1;
+}
+.db-editor--write::placeholder { color: rgba(27, 26, 23, 0.3); font-style: italic; }
+
+/* ─────────────────────────────────────────────────────────
+   CODE panel
+   ───────────────────────────────────────────────────────── */
+.db-panel--code {
+  background: #0d1117;
+  color: var(--cream);
+}
+
+.db-panel--code .eyebrow { color: rgba(213, 199, 177, 0.45); }
+
+.db-code-controls {
+  display: flex;
+  align-items: center;
+  gap: .8rem;
+  flex-wrap: wrap;
+}
+
+.db-lang-label {
+  font: 500 .62rem var(--mono);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: rgba(213, 199, 177, 0.4);
+}
+
+.db-lang-select {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(228, 201, 141, 0.18);
+  border-radius: 4px;
+  color: var(--cream);
+  font: 500 .72rem var(--mono);
+  padding: .35rem .65rem;
+  cursor: pointer;
+  outline: none;
+  transition: border-color .2s;
+}
+.db-lang-select:focus,
+.db-lang-select:hover { border-color: rgba(228, 201, 141, 0.45); }
+
+/* Code area with line numbers */
+.db-code-wrap {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  border: 1px solid rgba(228, 201, 141, 0.1);
+  border-radius: 6px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.db-line-numbers {
+  padding: .6rem .5rem .6rem .75rem;
+  font: 400 .82rem/1.7 var(--mono);
+  color: rgba(213, 199, 177, 0.2);
+  text-align: right;
+  white-space: pre;
+  user-select: none;
+  border-right: 1px solid rgba(228, 201, 141, 0.08);
+  overflow: hidden;
+  min-width: 2.8rem;
+  flex-shrink: 0;
+}
+
+.db-editor--code {
+  font: 400 .88rem/1.7 var(--mono);
+  color: #e2e8f0;
+  padding: .6rem .75rem;
+  tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+  flex: 1;
+}
+.db-editor--code::placeholder { color: rgba(213, 199, 177, 0.2); font-style: normal; }
+
+/* ─────────────────────────────────────────────────────────
+   ACTION panel
+   ───────────────────────────────────────────────────────── */
+.db-panel--action {
+  background: var(--cream);
+  color: var(--ink);
+}
+
+.db-panel--action .eyebrow { color: rgba(27, 26, 23, 0.45); }
+.db-panel--action .db-panel-title { color: var(--ink); }
+.db-panel--action .db-save-status { color: rgba(27, 26, 23, 0.35); }
+.db-panel--action .db-save-status.saving { color: rgba(27, 26, 23, 0.6); }
+.db-panel--action .db-save-status.saved  { color: #2d7a50; }
+.db-panel--action .db-save-status.error  { color: var(--red); }
+
+.db-action-wrap {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  position: relative;
+  gap: 0;
+}
+
+/* Rotated margin strip */
+.db-script-margin {
+  width: clamp(2.5rem, 5vw, 4rem);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-evenly;
+  padding: 1rem 0;
+  border-right: 1px solid rgba(27, 26, 23, 0.12);
+  overflow: hidden;
+}
+.db-script-margin span {
+  font: 500 .55rem var(--mono);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  color: rgba(27, 26, 23, 0.25);
+  user-select: none;
+}
+
+/* Scribble watermark (reuses .scribble from styles.css) */
+.db-scribble-overlay {
+  position: absolute;
+  bottom: 1.5rem;
+  right: 2rem;
+  width: 120px;
+  opacity: .18;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.db-editor--action {
+  font: 400 .98rem/1.85 var(--mono);
+  color: var(--ink);
+  flex: 1;
+  padding: 1rem 1.5rem 3rem clamp(1rem, 2vw, 2rem);
+  letter-spacing: .01em;
+}
+.db-editor--action::placeholder {
+  color: rgba(27, 26, 23, 0.28);
+  font-style: italic;
+}
+
+/* ── Scrollbars (all panels) ── */
+.db-editor {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(228, 201, 141, 0.2) transparent;
+}
+.db-editor::-webkit-scrollbar { width: 6px; height: 6px; }
+.db-editor::-webkit-scrollbar-thumb { background: rgba(228, 201, 141, 0.2); border-radius: 3px; }
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .db-panel--action .db-script-margin { display: none; }
+  .db-panel-title { font-size: clamp(1.5rem, 6vw, 2.2rem); }
+}

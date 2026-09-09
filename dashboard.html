@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#10141d" />
+    <title>Dashboard — Write Code Action</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="dashboard.css" />
+  </head>
+  <body>
+    <div class="grain" aria-hidden="true"></div>
+
+    <!-- ── Dashboard Header ── -->
+    <header class="db-header">
+      <a class="brand" href="/" aria-label="Write Code Action home">
+        <span>W</span><span>C</span><span>A</span>
+      </a>
+      <p class="db-greeting" id="db-greeting">Welcome back.</p>
+      <a class="db-home-link" href="/">← Back to the story</a>
+    </header>
+
+    <!-- ── Tab Navigation ── -->
+    <nav class="db-tabs" aria-label="Workspace sections">
+      <button class="db-tab active" data-panel="write" aria-selected="true">
+        <span class="db-tab-num">01</span> Write
+      </button>
+      <button class="db-tab" data-panel="code" aria-selected="false">
+        <span class="db-tab-num">02</span> Code
+      </button>
+      <button class="db-tab" data-panel="action" aria-selected="false">
+        <span class="db-tab-num">03</span> Action
+      </button>
+    </nav>
+
+    <!-- ── Panels ── -->
+    <main class="db-main">
+
+      <!-- ── WRITE panel ── -->
+      <section class="db-panel db-panel--write active" id="panel-write" aria-label="Write workspace">
+        <div class="db-panel-deco" aria-hidden="true">
+          <div class="ink-blot blot-one"></div>
+          <div class="ink-blot blot-two"></div>
+          <div class="paper-sun"></div>
+        </div>
+        <div class="db-panel-inner">
+          <div class="db-panel-header">
+            <div>
+              <p class="eyebrow">your stories &amp; ideas</p>
+              <h2 class="db-panel-title">Write the<br><em>impossible.</em></h2>
+            </div>
+            <span class="db-save-status" id="save-write" aria-live="polite"></span>
+          </div>
+          <div class="db-write-area">
+            <div class="db-ruled-lines" aria-hidden="true"></div>
+            <textarea
+              id="editor-write"
+              class="db-editor db-editor--write"
+              placeholder="Every great world starts in the margins. Begin writing here…"
+              spellcheck="true"
+              aria-label="Story and ideas editor"
+            ></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── CODE panel ── -->
+      <section class="db-panel db-panel--code" id="panel-code" aria-label="Code workspace" hidden>
+        <div class="db-panel-inner">
+          <div class="db-panel-header">
+            <div>
+              <p class="eyebrow">turn ideas into systems</p>
+              <h2 class="db-panel-title">Code your<br><em>world.</em></h2>
+            </div>
+            <div class="db-code-controls">
+              <label class="db-lang-label" for="lang-select">Language</label>
+              <select id="lang-select" class="db-lang-select" aria-label="Programming language">
+                <option value="plaintext">Plaintext</option>
+                <option value="javascript">JavaScript</option>
+                <option value="typescript">TypeScript</option>
+                <option value="python">Python</option>
+                <option value="html">HTML</option>
+                <option value="css">CSS</option>
+                <option value="json">JSON</option>
+                <option value="markdown">Markdown</option>
+                <option value="rust">Rust</option>
+                <option value="go">Go</option>
+                <option value="c">C</option>
+                <option value="cpp">C++</option>
+                <option value="java">Java</option>
+                <option value="bash">Bash</option>
+                <option value="sql">SQL</option>
+              </select>
+              <span class="db-save-status" id="save-code" aria-live="polite"></span>
+            </div>
+          </div>
+          <div class="db-code-wrap">
+            <div class="db-line-numbers" id="line-numbers" aria-hidden="true">1</div>
+            <textarea
+              id="editor-code"
+              class="db-editor db-editor--code"
+              placeholder="// Your code lives here. Pick a language above and start building."
+              spellcheck="false"
+              autocorrect="off"
+              autocapitalize="off"
+              aria-label="Code editor"
+            ></textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── ACTION panel ── -->
+      <section class="db-panel db-panel--action" id="panel-action" aria-label="Action workspace" hidden>
+        <div class="db-panel-inner">
+          <div class="db-panel-header">
+            <div>
+              <p class="eyebrow">now make it real</p>
+              <h2 class="db-panel-title">Write the<br><em>script.</em></h2>
+            </div>
+            <span class="db-save-status" id="save-action" aria-live="polite"></span>
+          </div>
+          <div class="db-action-wrap">
+            <div class="db-script-margin" aria-hidden="true">
+              <span>INT.</span>
+              <span>EXT.</span>
+              <span>CUT TO:</span>
+              <span>FADE IN:</span>
+            </div>
+            <!-- Scribble watermark -->
+            <div class="db-scribble-overlay" aria-hidden="true">
+              <div class="scribble"></div>
+              <div class="scribble short"></div>
+              <div class="scribble"></div>
+              <div class="scribble short"></div>
+            </div>
+            <textarea
+              id="editor-action"
+              class="db-editor db-editor--action"
+              placeholder="INT. THE BLANK PAGE - CONTINUOUS&#10;&#10;The cursor blinks. An idea stirs somewhere offscreen.&#10;&#10;Write your script, outline, pitch, or just scribble."
+              spellcheck="true"
+              aria-label="Script and action editor"
+            ></textarea>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <script src="dashboard.js"></script>
+  </body>
+</html>

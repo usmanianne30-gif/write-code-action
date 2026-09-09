@@ -25,9 +25,8 @@ form.addEventListener('submit', async event => {
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'Something went wrong. Please try again.');
-    form.reset();
-    message.style.color = '#2d7a50';
-    message.textContent = result.message;
+    // Redirect to the member dashboard — the server already set the session cookie.
+    window.location.href = '/dashboard';
   } catch (error) {
     message.style.color = '#b92720';
     message.textContent = error.message === 'Failed to fetch'

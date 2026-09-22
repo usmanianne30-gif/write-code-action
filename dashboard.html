@@ -7,6 +7,10 @@
     <title>Workspace — Write Code Action</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="dashboard.css" />
+    <!-- Ace Editor & Marked.js for Code Workspace & AI Chat -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.32.7/ace.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script>
   </head>
   <body>
     <div class="grain" aria-hidden="true"></div>
@@ -87,14 +91,123 @@
       </section>
 
       <!-- ════════════════════════════════════════════════════════
-           2. CODE PANEL (Blank workspace, prompt coming later)
+           2. CODE PANEL — AI Coding Workspace (Editor & Chatbot)
            ════════════════════════════════════════════════════════ -->
       <section class="db-panel db-panel--code" id="panel-code" aria-label="Code workspace" hidden>
-        <div class="code-blank-canvas">
-          <!-- Minimal aesthetic blank canvas as instructed -->
-          <div class="blank-code-indicator">
-            <span class="code-cursor-icon">›_</span>
-            <span class="code-blank-text">Workspace initialized. Standing by for code prompt.</span>
+        <div class="ai-coding-workspace">
+          <!-- ── LEFT SECTION: CODE EDITOR & RUNNER ── -->
+          <div class="code-editor-section">
+            <div class="code-toolbar">
+              <div class="code-toolbar-left">
+                <label for="code-lang-select" class="toolbar-label">Language:</label>
+                <select id="code-lang-select" class="code-select" aria-label="Select programming language">
+                  <option value="python">Python</option>
+                  <option value="javascript">JavaScript</option>
+                  <option value="typescript">TypeScript</option>
+                  <option value="cpp">C++</option>
+                  <option value="c">C</option>
+                  <option value="java">Java</option>
+                  <option value="go">Go</option>
+                  <option value="rust">Rust</option>
+                  <option value="html">HTML</option>
+                  <option value="css">CSS</option>
+                  <option value="sql">SQL</option>
+                </select>
+                <button type="button" id="btn-run-code" class="btn-code-run" aria-label="Run Code">
+                  <span class="run-play-icon">▶</span> Run Code
+                </button>
+                <button type="button" id="btn-clear-code" class="btn-code-secondary">
+                  Clear
+                </button>
+              </div>
+              <div class="code-toolbar-right">
+                <span class="db-save-status" id="save-code" aria-live="polite"></span>
+              </div>
+            </div>
+
+            <!-- ACE Editor Mounting Surface -->
+            <div class="ace-wrapper">
+              <div id="ace-editor-box" class="ace-editor-surface"></div>
+            </div>
+
+            <!-- Terminal / Output Console -->
+            <div class="terminal-drawer" id="terminal-drawer">
+              <div class="terminal-header">
+                <div class="terminal-meta">
+                  <span class="terminal-prompt-icon">›_</span>
+                  <span class="terminal-title">TERMINAL OUTPUT</span>
+                  <span class="terminal-badge" id="terminal-status-badge">Ready</span>
+                </div>
+                <div class="terminal-actions">
+                  <button type="button" class="btn-term-action" id="btn-fix-with-ai" hidden>
+                    ⚡ Fix with AI
+                  </button>
+                  <button type="button" class="btn-term-action" id="btn-clear-terminal">
+                    Clear
+                  </button>
+                </div>
+              </div>
+              <pre class="terminal-console" id="terminal-output-text">$ Ready. Choose your language and click "Run Code" to execute.</pre>
+            </div>
+          </div>
+
+          <!-- ── RIGHT SECTION: AI CODING CHATBOT ── -->
+          <div class="ai-assistant-section">
+            <div class="ai-header">
+              <div class="ai-header-info">
+                <span class="ai-pulse-dot"></span>
+                <span class="ai-title">WCA CODE AI</span>
+                <span class="ai-model-tag" id="ai-model-tag">Gemini Flash</span>
+              </div>
+              <button type="button" class="btn-clear-chat" id="btn-clear-chat" title="Clear conversation">
+                Clear
+              </button>
+            </div>
+
+            <!-- Context Awareness Strip -->
+            <div class="ai-context-strip" id="ai-context-strip">
+              <span class="context-pill" id="context-lang-pill">Python</span>
+              <span class="context-desc" id="context-desc">Editor in scope</span>
+            </div>
+
+            <!-- Chat Message Feed -->
+            <div class="ai-chat-thread" id="ai-chat-thread">
+              <div class="ai-message ai-message--assistant">
+                <div class="msg-avatar">AI</div>
+                <div class="msg-bubble">
+                  <p>Welcome to the <strong>WCA Coding Workspace</strong>.</p>
+                  <p>I can help you:</p>
+                  <ul>
+                    <li>Generate algorithms and applications from natural language prompts</li>
+                    <li>Debug errors directly from your terminal output</li>
+                    <li>Explain, optimize, or translate code into other languages</li>
+                  </ul>
+                  <p>Try asking: <em>"Write a Python program that sorts a list using merge sort."</em></p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quick Action Chips -->
+            <div class="ai-quick-chips">
+              <button type="button" class="chip-btn" data-prompt="Explain this function and how it works step by step.">Explain</button>
+              <button type="button" class="chip-btn" data-prompt="Analyze the time and space complexity, then optimize this code.">Optimize</button>
+              <button type="button" class="chip-btn" data-prompt="Check this code for bugs, edge cases, and potential runtime errors.">Debug</button>
+              <button type="button" class="chip-btn" data-prompt="Write comprehensive unit tests with test cases for this code.">Write Tests</button>
+              <button type="button" class="chip-btn" data-prompt="Translate this code to Java with idiomatic syntax.">To Java</button>
+            </div>
+
+            <!-- Chat Input Area -->
+            <form class="ai-input-form" id="ai-chat-form">
+              <textarea
+                id="ai-prompt-input"
+                class="ai-prompt-textarea"
+                placeholder="Ask AI to write, fix, or explain code… (Shift+Enter for newline)"
+                rows="1"
+              ></textarea>
+              <button type="submit" class="btn-ai-submit" id="btn-ai-submit" aria-label="Send to AI">
+                <span>↑</span>
+              </button>
+            </form>
           </div>
         </div>
       </section>

@@ -22,8 +22,17 @@ const CONTENT_FILE = path.join(DATA_DIRECTORY, 'content.json');
 const ACTIVITY_FILE = path.join(DATA_DIRECTORY, 'activity.json');
 const PORT = Number(process.env.PORT || 4173);
 const PASSWORD_UNIQUENESS_KEY = process.env.PASSWORD_UNIQUENESS_KEY || 'wca-local-secret-key-2026';
-const SUPABASE_URL = process.env.SUPABASE_URL?.replace(/\/$/, '');
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+function getCleanSupabaseUrl() {
+  let url = (process.env.SUPABASE_URL || '').trim();
+  if (!url) return null;
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = `https://${url}`;
+  }
+  return url.replace(/\/+$/, '');
+}
+const SUPABASE_URL = getCleanSupabaseUrl();
+const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 
 const ADMIN_USERNAME = 'usmanianne30';
 const ADMIN_PASSWORD = '301327';
@@ -35,19 +44,26 @@ function usingSupabase() {
 }
 
 async function supabase(pathname, options = {}) {
-  const response = await fetch(`${SUPABASE_URL}/rest/v1/${pathname}`, {
-    ...options,
-    headers: {
-      apikey: SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-      'Content-Type': 'application/json',
-      ...(options.headers || {})
-    }
-  });
-  const text = await response.text();
-  let body = null;
-  try { body = text ? JSON.parse(text) : null; } catch { body = text; }
-  return { response, body };
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 6000);
+  try {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/${pathname}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        apikey: SUPABASE_SERVICE_ROLE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      }
+    });
+    const text = await response.text();
+    let body = null;
+    try { body = text ? JSON.parse(text) : null; } catch { body = text; }
+    return { response, body };
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -583,10 +599,10 @@ async function handleAIChat(request, response) {
   const { prompt = '', code = '', language = 'python', output = '', messages = [] } = body;
   if (!prompt.trim()) return json(response, 400, { error: 'Prompt is required.' });
 
-  // If Gemini API Key is provided, use Google Gemini 2.5 / 1.5 Flash
+  // If Gemini API Key is provided, use Google Gemini Flash models with multi-model fallback
   if (GEMINI_API_KEY) {
-    try {
-      const systemInstruction = `You are the Write Code Action AI coding assistant.
+    const trimmedKey = GEMINI_API_KEY.trim();
+    const systemInstruction = `You are the Write Code Action AI coding assistant.
 You help programmers write, debug, explain, optimize, and test code.
 Current Workspace Context:
 - Active Language: ${language}
@@ -598,49 +614,66 @@ Guidelines:
 2. When generating or modifying code, provide complete, syntactically correct code blocks with the language tag (e.g. \`\`\`${language}).
 3. Write clean, production-ready, well-formatted code.`;
 
-      const contents = [];
-      // Previous messages for conversation memory
-      if (Array.isArray(messages)) {
-        for (const m of messages.slice(-8)) {
-          contents.push({
-            role: m.role === 'user' ? 'user' : 'model',
-            parts: [{ text: m.content }]
-          });
-        }
+    const contents = [];
+    // Previous messages for conversation memory
+    if (Array.isArray(messages)) {
+      for (const m of messages.slice(-8)) {
+        contents.push({
+          role: m.role === 'user' ? 'user' : 'model',
+          parts: [{ text: m.content }]
+        });
       }
-      contents.push({
-        role: 'user',
-        parts: [{ text: prompt }]
-      });
+    }
+    contents.push({
+      role: 'user',
+      parts: [{ text: prompt }]
+    });
 
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-      const geminiRes = await fetch(geminiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: systemInstruction }] },
-          contents,
-          generationConfig: {
-            temperature: 0.3,
-            maxOutputTokens: 2048
+    const candidateModels = [
+      process.env.GEMINI_MODEL,
+      'gemini-3.6-flash',
+      'gemini-3.8-flash',
+      'gemini-3.7-flash',
+      'gemini-2.5-flash',
+      'gemini-1.5-flash'
+    ].filter(Boolean);
+
+    for (const modelName of candidateModels) {
+      try {
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${trimmedKey}`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 18000);
+        const geminiRes = await fetch(geminiUrl, {
+          method: 'POST',
+          signal: controller.signal,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: systemInstruction }] },
+            contents,
+            generationConfig: {
+              temperature: 0.3,
+              maxOutputTokens: 2048
+            }
+          })
+        });
+        clearTimeout(timeoutId);
+
+        const geminiData = await geminiRes.json();
+        if (geminiRes.ok) {
+          const reply = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (reply) {
+            return json(response, 200, {
+              reply,
+              model: modelName,
+              language
+            });
           }
-        })
-      });
-
-      const geminiData = await geminiRes.json();
-      if (!geminiRes.ok) {
-        throw new Error(geminiData.error?.message || 'Gemini API call failed');
+        } else {
+          console.warn(`Gemini model ${modelName} returned status ${geminiRes.status}:`, geminiData.error?.message || 'Error');
+        }
+      } catch (err) {
+        console.warn(`Gemini model ${modelName} call failed:`, err.message);
       }
-
-      const reply = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || 'No response generated.';
-      return json(response, 200, {
-        reply,
-        model: 'gemini-2.5-flash',
-        language
-      });
-    } catch (err) {
-      console.error('Gemini API call failed:', err.message);
-      // Fallback gracefully below
     }
   }
 
@@ -759,7 +792,7 @@ solve();
 
   return json(response, 200, {
     reply: generatedReply,
-    model: GEMINI_API_KEY ? 'gemini-2.5-flash' : 'wca-assistant-builtin',
+    model: 'wca-assistant-builtin',
     language
   });
 }

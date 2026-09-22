@@ -744,7 +744,7 @@ async function sendToAI(userPrompt) {
     if (!res.ok) throw new Error(data.error || 'AI service error');
 
     if (aiModelTag && data.model) {
-      aiModelTag.textContent = data.model === 'gemini-2.5-flash' ? 'Gemini Flash' : 'Built-in AI';
+      aiModelTag.textContent = data.model.includes('gemini') ? 'Gemini Flash' : 'Built-in AI';
     }
 
     // Save to conversation memory

@@ -16,7 +16,10 @@
       <nav aria-label="Main navigation">
         <a href="#write">Write</a><a href="#code">Code</a><a href="#action">Action</a>
       </nav>
-      <button class="join-small" data-open-signup>Join WCA <i>↗</i></button>
+      <div style="display:flex;align-items:center;gap:.6rem;">
+        <a class="join-small" href="/login" style="text-decoration:none;display:inline-flex;align-items:center;">Log In</a>
+        <button class="join-small" data-open-signup>Join WCA <i>↗</i></button>
+      </div>
     </header>
 
     <main id="top">
@@ -90,9 +93,10 @@ world.<span class="cyan">bringToLife</span>();</code></pre>
       <form id="signup-form">
         <p class="eyebrow">Join Write Code Action</p>
         <h2 id="signup-title">Make your<br>entrance.</h2>
+        <label>Your real name<input id="name" name="name" autocomplete="name" maxlength="80" placeholder="e.g. Maya Lin" required /></label>
         <label>Choose your username<input id="username" name="username" autocomplete="username" minlength="3" maxlength="24" pattern="[A-Za-z0-9_-]+" placeholder="e.g. pixelpoet" required /></label>
-        <label>Choose a unique password<input id="password" name="password" type="password" autocomplete="new-password" minlength="8" placeholder="At least 8 characters" required /></label>
-        <p class="form-note">Your details are stored securely by Write Code Action.</p>
+        <label>Choose a unique password<input id="password" name="password" type="password" autocomplete="new-password" minlength="6" placeholder="At least 6 characters" required /></label>
+        <p class="form-note">Already in the cast? <a href="/login" style="color:#cc2a20;font-weight:600;">Log in here</a>.</p>
         <p class="form-message" id="form-message" role="status"></p>
         <button class="cta form-submit" type="submit">Claim your name <span>→</span></button>
       </form>

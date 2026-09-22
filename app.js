@@ -7,7 +7,7 @@ window.addEventListener('load', () => document.body.classList.add('loaded'));
 document.querySelectorAll('[data-open-signup]').forEach(button => button.addEventListener('click', () => {
   message.textContent = '';
   dialog.showModal();
-  setTimeout(() => document.querySelector('#username').focus(), 120);
+  setTimeout(() => (document.querySelector('#name') || document.querySelector('#username')).focus(), 120);
 }));
 document.querySelector('[data-close-signup]').addEventListener('click', () => dialog.close());
 dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
@@ -21,7 +21,11 @@ form.addEventListener('submit', async event => {
   try {
     const response = await fetch('/api/signup', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: form.username.value, password: form.password.value })
+      body: JSON.stringify({
+        name: form.name?.value || '',
+        username: form.username.value,
+        password: form.password.value
+      })
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'Something went wrong. Please try again.');

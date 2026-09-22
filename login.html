@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#10141d" />
+    <title>Member Access — Write Code Action</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="login.css" />
+  </head>
+  <body>
+    <div class="grain" aria-hidden="true"></div>
+
+    <header class="login-header">
+      <a class="brand" href="/" aria-label="Write Code Action home">
+        <span>W</span><span>C</span><span>A</span>
+      </a>
+      <a class="back-link" href="/">← Explore Club Story</a>
+    </header>
+
+    <main class="login-container">
+      <div class="login-card">
+        <!-- Left theatrical badge art -->
+        <div class="login-art" aria-hidden="true">
+          <div class="art-letters">
+            <span>W</span><span>C</span><span>A</span>
+          </div>
+          <p class="art-tagline">THE<br>STAGE<br>AWAITS.</p>
+          <div class="art-note">ACT I · SCENE 1</div>
+        </div>
+
+        <!-- Right form container -->
+        <div class="login-body">
+          <div class="auth-tabs" role="tablist">
+            <button type="button" class="auth-tab active" id="tab-login" role="tab" aria-selected="true" aria-controls="pane-login">
+              Log In
+            </button>
+            <button type="button" class="auth-tab" id="tab-register" role="tab" aria-selected="false" aria-controls="pane-register">
+              Register
+            </button>
+          </div>
+
+          <!-- LOGIN FORM -->
+          <div class="auth-pane active" id="pane-login" role="tabpanel" aria-labelledby="tab-login">
+            <p class="eyebrow">Members Only</p>
+            <h1 class="auth-title">Welcome<br><em>back.</em></h1>
+            <p class="auth-desc">Enter your unique ID and password to access your private drafts, scripts, and notebook.</p>
+
+            <form id="login-form" novalidate>
+              <label for="login-username">
+                Unique ID / Username
+                <input
+                  type="text"
+                  id="login-username"
+                  name="username"
+                  autocomplete="username"
+                  placeholder="e.g. usmanianne30"
+                  required
+                  spellcheck="false"
+                  autocapitalize="none"
+                />
+              </label>
+
+              <label for="login-password">
+                Password
+                <input
+                  type="password"
+                  id="login-password"
+                  name="password"
+                  autocomplete="current-password"
+                  placeholder="Enter your password"
+                  required
+                />
+              </label>
+
+              <div class="form-feedback" id="login-feedback" role="status" aria-live="polite"></div>
+
+              <button type="submit" class="cta auth-submit">
+                Enter Stage <span>→</span>
+              </button>
+            </form>
+          </div>
+
+          <!-- REGISTER FORM -->
+          <div class="auth-pane" id="pane-register" role="tabpanel" aria-labelledby="tab-register" hidden>
+            <p class="eyebrow">New Member</p>
+            <h1 class="auth-title">Join the<br><em>cast.</em></h1>
+            <p class="auth-desc">Create your private membership. Only you will see your work.</p>
+
+            <form id="register-form" novalidate>
+              <label for="reg-name">
+                Real Name
+                <input
+                  type="text"
+                  id="reg-name"
+                  name="name"
+                  autocomplete="name"
+                  placeholder="e.g. Usman Anne"
+                  required
+                  maxlength="80"
+                />
+              </label>
+
+              <label for="reg-username">
+                Unique ID / Username
+                <input
+                  type="text"
+                  id="reg-username"
+                  name="username"
+                  autocomplete="username"
+                  minlength="3"
+                  maxlength="24"
+                  pattern="[A-Za-z0-9_-]+"
+                  placeholder="3-24 letters, numbers, or hyphens"
+                  required
+                  spellcheck="false"
+                  autocapitalize="none"
+                />
+              </label>
+
+              <label for="reg-password">
+                Unique Password
+                <input
+                  type="password"
+                  id="reg-password"
+                  name="password"
+                  autocomplete="new-password"
+                  minlength="6"
+                  placeholder="At least 6 characters"
+                  required
+                />
+              </label>
+
+              <div class="form-feedback" id="reg-feedback" role="status" aria-live="polite"></div>
+
+              <button type="submit" class="cta auth-submit">
+                Claim Place in Cast <span>→</span>
+              </button>
+            </form>
+          </div>
+
+        </div>
+      </div>
+    </main>
+
+    <script src="login.js"></script>
+  </body>
+</html>

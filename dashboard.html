@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#10141d" />
-    <title>Dashboard — Write Code Action</title>
+    <title>Workspace — Write Code Action</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="dashboard.css" />
   </head>
@@ -13,138 +13,249 @@
 
     <!-- ── Dashboard Header ── -->
     <header class="db-header">
-      <a class="brand" href="/" aria-label="Write Code Action home">
-        <span>W</span><span>C</span><span>A</span>
-      </a>
-      <p class="db-greeting" id="db-greeting">Welcome back.</p>
-      <a class="db-home-link" href="/">← Back to the story</a>
+      <div class="db-header-left">
+        <a class="brand" href="/" aria-label="Write Code Action home">
+          <span>W</span><span>C</span><span>A</span>
+        </a>
+        <div class="db-user-badge" id="db-user-badge">
+          <span class="user-avatar" id="user-avatar">?</span>
+          <div class="user-meta">
+            <span class="user-real-name" id="user-real-name">Loading…</span>
+            <span class="user-id" id="user-id">@...</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="db-header-right">
+        <!-- Admin toggle button: strictly visible only for usmanianne30 -->
+        <button id="btn-admin-toggle" class="btn-admin-drawer" hidden aria-label="Open Director Console">
+          <span class="pulse-dot"></span>
+          <span>Director's Console</span>
+        </button>
+
+        <button id="btn-logout" class="btn-logout" aria-label="Sign out">
+          <span>Sign Out</span>
+        </button>
+      </div>
     </header>
 
-    <!-- ── Tab Navigation ── -->
-    <nav class="db-tabs" aria-label="Workspace sections">
-      <button class="db-tab active" data-panel="write" aria-selected="true">
+    <!-- ── Three Primary Options: Write, Code, Action ── -->
+    <nav class="db-tabs" aria-label="Workspace modes">
+      <button class="db-tab active" data-panel="write" id="tab-btn-write" aria-selected="true">
         <span class="db-tab-num">01</span> Write
       </button>
-      <button class="db-tab" data-panel="code" aria-selected="false">
+      <button class="db-tab" data-panel="code" id="tab-btn-code" aria-selected="false">
         <span class="db-tab-num">02</span> Code
       </button>
-      <button class="db-tab" data-panel="action" aria-selected="false">
+      <button class="db-tab" data-panel="action" id="tab-btn-action" aria-selected="false">
         <span class="db-tab-num">03</span> Action
       </button>
     </nav>
 
-    <!-- ── Panels ── -->
+    <!-- ── Main Workspace ── -->
     <main class="db-main">
 
-      <!-- ── WRITE panel ── -->
+      <!-- ════════════════════════════════════════════════════════
+           1. WRITE PANEL (Aged, slightly yellowed vintage paper)
+           ════════════════════════════════════════════════════════ -->
       <section class="db-panel db-panel--write active" id="panel-write" aria-label="Write workspace">
-        <div class="db-panel-deco" aria-hidden="true">
-          <div class="ink-blot blot-one"></div>
-          <div class="ink-blot blot-two"></div>
-          <div class="paper-sun"></div>
-        </div>
-        <div class="db-panel-inner">
-          <div class="db-panel-header">
-            <div>
-              <p class="eyebrow">your stories &amp; ideas</p>
-              <h2 class="db-panel-title">Write the<br><em>impossible.</em></h2>
+        <div class="paper-desk">
+          <div class="paper-sheet paper-aged">
+            <div class="paper-sheet-header">
+              <div class="paper-vintage-meta">
+                <span class="paper-stamp">WCA MANUSCRIPT · DRAFT</span>
+                <span class="paper-rule-date" id="write-current-date"></span>
+              </div>
+              <span class="db-save-status" id="save-write" aria-live="polite"></span>
             </div>
-            <span class="db-save-status" id="save-write" aria-live="polite"></span>
-          </div>
-          <div class="db-write-area">
-            <div class="db-ruled-lines" aria-hidden="true"></div>
+
+            <!-- Blank, free-form typable aged paper -->
             <textarea
               id="editor-write"
-              class="db-editor db-editor--write"
-              placeholder="Every great world starts in the margins. Begin writing here…"
+              class="paper-editor"
+              placeholder="A blank page of old paper. Type freely in any format—stories, essays, scenes, raw thoughts…"
               spellcheck="true"
-              aria-label="Story and ideas editor"
+              aria-label="Story and thoughts editor"
             ></textarea>
+
+            <div class="paper-footer-bar">
+              <span class="word-counter" id="words-write">0 words</span>
+              <span class="paper-watermark">ARCHIVAL PAPER · SOLE AUTHOR PRIVACY</span>
+            </div>
           </div>
         </div>
       </section>
 
-      <!-- ── CODE panel ── -->
+      <!-- ════════════════════════════════════════════════════════
+           2. CODE PANEL (Blank workspace, prompt coming later)
+           ════════════════════════════════════════════════════════ -->
       <section class="db-panel db-panel--code" id="panel-code" aria-label="Code workspace" hidden>
-        <div class="db-panel-inner">
-          <div class="db-panel-header">
-            <div>
-              <p class="eyebrow">turn ideas into systems</p>
-              <h2 class="db-panel-title">Code your<br><em>world.</em></h2>
-            </div>
-            <div class="db-code-controls">
-              <label class="db-lang-label" for="lang-select">Language</label>
-              <select id="lang-select" class="db-lang-select" aria-label="Programming language">
-                <option value="plaintext">Plaintext</option>
-                <option value="javascript">JavaScript</option>
-                <option value="typescript">TypeScript</option>
-                <option value="python">Python</option>
-                <option value="html">HTML</option>
-                <option value="css">CSS</option>
-                <option value="json">JSON</option>
-                <option value="markdown">Markdown</option>
-                <option value="rust">Rust</option>
-                <option value="go">Go</option>
-                <option value="c">C</option>
-                <option value="cpp">C++</option>
-                <option value="java">Java</option>
-                <option value="bash">Bash</option>
-                <option value="sql">SQL</option>
-              </select>
-              <span class="db-save-status" id="save-code" aria-live="polite"></span>
-            </div>
-          </div>
-          <div class="db-code-wrap">
-            <div class="db-line-numbers" id="line-numbers" aria-hidden="true">1</div>
-            <textarea
-              id="editor-code"
-              class="db-editor db-editor--code"
-              placeholder="// Your code lives here. Pick a language above and start building."
-              spellcheck="false"
-              autocorrect="off"
-              autocapitalize="off"
-              aria-label="Code editor"
-            ></textarea>
+        <div class="code-blank-canvas">
+          <!-- Minimal aesthetic blank canvas as instructed -->
+          <div class="blank-code-indicator">
+            <span class="code-cursor-icon">›_</span>
+            <span class="code-blank-text">Workspace initialized. Standing by for code prompt.</span>
           </div>
         </div>
       </section>
 
-      <!-- ── ACTION panel ── -->
+      <!-- ════════════════════════════════════════════════════════
+           3. ACTION PANEL (Two options: Theatre Script & Animation Notebook)
+           ════════════════════════════════════════════════════════ -->
       <section class="db-panel db-panel--action" id="panel-action" aria-label="Action workspace" hidden>
-        <div class="db-panel-inner">
-          <div class="db-panel-header">
-            <div>
-              <p class="eyebrow">now make it real</p>
-              <h2 class="db-panel-title">Write the<br><em>script.</em></h2>
-            </div>
-            <span class="db-save-status" id="save-action" aria-live="polite"></span>
+        
+        <!-- Action Sub-Selector Bar -->
+        <div class="action-subnav-bar">
+          <div class="action-options-group" role="tablist" aria-label="Action formats">
+            <button type="button" class="action-sub-btn active" id="sub-btn-theatre" role="tab" aria-selected="true" aria-controls="action-view-theatre">
+              <span class="sub-icon">🎭</span> 1. Theatre Script Writing
+            </button>
+            <button type="button" class="action-sub-btn" id="sub-btn-anime" role="tab" aria-selected="false" aria-controls="action-view-anime">
+              <span class="sub-icon">📓</span> 2. Animation / Anime Composition Notebook
+            </button>
           </div>
-          <div class="db-action-wrap">
-            <div class="db-script-margin" aria-hidden="true">
-              <span>INT.</span>
-              <span>EXT.</span>
-              <span>CUT TO:</span>
-              <span>FADE IN:</span>
+          <span class="db-save-status" id="save-action" aria-live="polite"></span>
+        </div>
+
+        <div class="action-views-container">
+
+          <!-- OPTION 1: THEATRE SCRIPT FORMAT -->
+          <div class="action-view active" id="action-view-theatre" role="tabpanel">
+            <div class="theatre-stage-wrapper">
+              <!-- Formatting helper ribbon -->
+              <div class="theatre-tools">
+                <span class="tool-label">STAGEPLAY FORMAT:</span>
+                <button type="button" class="script-tag-btn" data-insert="ACT I&#10;">+ Act</button>
+                <button type="button" class="script-tag-btn" data-insert="SCENE 1&#10;">+ Scene</button>
+                <button type="button" class="script-tag-btn" data-insert="[AT RISE: ]&#10;">+ At Rise</button>
+                <button type="button" class="script-tag-btn" data-insert="CHARACTER NAME&#10;">+ Character</button>
+                <button type="button" class="script-tag-btn" data-insert="    (stage direction)&#10;">+ Direction</button>
+                <button type="button" class="script-tag-btn" data-insert="[BLACKOUT / CURTAIN]&#10;">+ Blackout</button>
+              </div>
+
+              <div class="theatre-manuscript-card">
+                <div class="theatre-manuscript-top">
+                  <span class="script-header-title">THEATRICAL PLAYWRITING MANUSCRIPT</span>
+                  <span class="script-header-spec">STANDARD DRAMATISTS FORMAT</span>
+                </div>
+                <textarea
+                  id="editor-theatre"
+                  class="theatre-script-editor"
+                  placeholder="ACT I&#10;&#10;SCENE 1&#10;&#10;[AT RISE: Early evening. A warm solitary lamp illuminates a wooden desk cluttering manuscripts and sketches. Silence, except for the rain.]&#10;&#10;ELENA&#10;    (stepping into the circle of light)&#10;We were never meant to keep quiet backstage.&#10;&#10;MARCUS&#10;    (without looking up)&#10;Then read the lines they haven't written yet."
+                  spellcheck="true"
+                  aria-label="Theatre script editor"
+                ></textarea>
+                <div class="script-footer">
+                  <span id="words-theatre">0 words</span>
+                  <span>THEATRE FORMAT: DIALOGUE INDENTED · UPPERCASE HEADINGS</span>
+                </div>
+              </div>
             </div>
-            <!-- Scribble watermark -->
-            <div class="db-scribble-overlay" aria-hidden="true">
-              <div class="scribble"></div>
-              <div class="scribble short"></div>
-              <div class="scribble"></div>
-              <div class="scribble short"></div>
-            </div>
-            <textarea
-              id="editor-action"
-              class="db-editor db-editor--action"
-              placeholder="INT. THE BLANK PAGE - CONTINUOUS&#10;&#10;The cursor blinks. An idea stirs somewhere offscreen.&#10;&#10;Write your script, outline, pitch, or just scribble."
-              spellcheck="true"
-              aria-label="Script and action editor"
-            ></textarea>
           </div>
+
+          <!-- OPTION 2: COMPOSITION NOTEBOOK FOR ANIME / ANIMATION IDEAS -->
+          <div class="action-view" id="action-view-anime" role="tabpanel" hidden>
+            <div class="comp-notebook-desk">
+              <div class="composition-book">
+                <!-- Classic marbled spine left -->
+                <div class="comp-spine">
+                  <div class="spine-texture"></div>
+                  <span class="spine-label">WCA · ANIME REEL</span>
+                </div>
+
+                <!-- Ruled composition paper inside -->
+                <div class="comp-page">
+                  <div class="comp-header-box">
+                    <div class="comp-title-line">
+                      <label>SERIES / PROJECT:</label>
+                      <input type="text" id="comp-series-title" class="comp-input" placeholder="e.g. Project Astral Echo (Anime Concept)" />
+                    </div>
+                    <div class="comp-meta-row">
+                      <span>ANIMATION / SAKUGA / BEATS NOTEBOOK</span>
+                      <span id="anime-date-stamp">COMPOSITION VOL. 1</span>
+                    </div>
+                  </div>
+
+                  <div class="comp-ruled-area">
+                    <div class="comp-margin-line"></div>
+                    <textarea
+                      id="editor-anime"
+                      class="comp-editor"
+                      placeholder="• EPISODE / SCENE PREMISE:&#10;  A rogue mecha pilot encounters an ancient celestial spirit in the neon ruins of Tokyo…&#10;&#10;• CHARACTER VISUAL DESIGN:&#10;  - Hair: Obsidian black with glowing crimson tips&#10;  - Signature weapon: Heavy kinetic katana with vapor exhaust&#10;&#10;• SAKUGA &amp; ANIMATION NOTES:&#10;  - High-framerate fluid sword clash&#10;  - Impact frames with monochromatic black/white flash&#10;&#10;• PLOT BEATS &amp; EMOTIONAL CORE:&#10;  Write out all your anime and animation storyboard ideas here…"
+                      spellcheck="true"
+                      aria-label="Animation and anime composition notebook editor"
+                    ></textarea>
+                  </div>
+
+                  <div class="comp-page-footer">
+                    <span id="words-anime">0 words</span>
+                    <span>COMPOSITION NOTEBOOK · COLLEGE RULED FOR CREATIVE DIRECTORS</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </section>
 
     </main>
+
+    <!-- ════════════════════════════════════════════════════════
+         4. ADMIN DRAWER (Only available for usmanianne30)
+         ════════════════════════════════════════════════════════ -->
+    <aside class="admin-drawer" id="admin-drawer" aria-hidden="true">
+      <div class="admin-drawer-overlay" id="admin-overlay"></div>
+      <div class="admin-drawer-panel">
+        <div class="admin-drawer-header">
+          <div>
+            <span class="admin-kicker">Director's Exclusive Log</span>
+            <h2 class="admin-heading">Cast Activity &amp; Roster</h2>
+          </div>
+          <button type="button" class="admin-close-btn" id="btn-admin-close" aria-label="Close Director Console">×</button>
+        </div>
+
+        <div class="admin-drawer-tabs">
+          <button type="button" class="admin-tab-btn active" id="btn-tab-roster">Cast Members (<span id="count-members">0</span>)</button>
+          <button type="button" class="admin-tab-btn" id="btn-tab-activity">Daily Activity Feed (<span id="count-activity">0</span>)</button>
+        </div>
+
+        <!-- Roster View -->
+        <div class="admin-tab-content active" id="admin-view-roster">
+          <div class="admin-roster-list" id="admin-roster-list">
+            <p class="admin-empty-text">Loading cast directory…</p>
+          </div>
+        </div>
+
+        <!-- Daily Activity Feed View -->
+        <div class="admin-tab-content" id="admin-view-activity" hidden>
+          <div class="admin-activity-timeline" id="admin-activity-list">
+            <p class="admin-empty-text">Loading daily events…</p>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── Member Writing Inspection Modal (for usmanianne30) ── -->
+    <dialog class="admin-inspect-modal" id="admin-inspect-modal">
+      <div class="inspect-modal-shell">
+        <div class="inspect-modal-header">
+          <div>
+            <span class="admin-kicker">Member Draft Inspection</span>
+            <h3 class="inspect-title" id="inspect-member-name">Member Writing</h3>
+          </div>
+          <button type="button" class="inspect-close-btn" id="btn-inspect-close">×</button>
+        </div>
+        <div class="inspect-tabs">
+          <button type="button" class="inspect-tab-btn active" data-inspect-section="write">Write Draft</button>
+          <button type="button" class="inspect-tab-btn" data-inspect-section="action_theatre">Theatre Script</button>
+          <button type="button" class="inspect-tab-btn" data-inspect-section="action_anime">Anime Notebook</button>
+        </div>
+        <div class="inspect-body">
+          <div class="inspect-content-box" id="inspect-content-text">Loading draft…</div>
+        </div>
+      </div>
+    </dialog>
 
     <script src="dashboard.js"></script>
   </body>

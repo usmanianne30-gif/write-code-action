@@ -86,18 +86,52 @@ function parseCookies(header = '') {
   );
 }
 
-function cookieUser(request) {
-  const cookies = parseCookies(request.headers.cookie || '');
-  const u = cookies['wca_user'];
-  return typeof u === 'string' && /^[a-z0-9_-]{3,24}$/.test(u) ? u : null;
+const SESSION_SECRET = crypto.createHmac('sha256', PASSWORD_UNIQUENESS_KEY)
+  .update('wca-session-hmac-seed-2026')
+  .digest('hex');
+
+function signSession(username, timestamp) {
+  return crypto.createHmac('sha256', SESSION_SECRET)
+    .update(`${username}.${timestamp}`)
+    .digest('hex');
 }
 
 function makeUserCookie(username) {
-  return `wca_user=${encodeURIComponent(username)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 365}`;
+  const timestamp = Date.now().toString();
+  const signature = signSession(username, timestamp);
+  const token = `${username}.${timestamp}.${signature}`;
+  return `wca_user=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 60 * 24 * 30}`;
 }
 
 function clearUserCookie() {
   return `wca_user=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`;
+}
+
+function cookieUser(request) {
+  const cookies = parseCookies(request.headers.cookie || '');
+  const raw = cookies['wca_user'];
+  if (typeof raw !== 'string' || !raw.trim()) return null;
+
+  const parts = raw.split('.');
+  if (parts.length === 3) {
+    const [username, timestamp, signature] = parts;
+    if (!/^[a-z0-9_-]{3,24}$/.test(username)) return null;
+
+    const timeNum = Number(timestamp);
+    if (!Number.isFinite(timeNum)) return null;
+    // 30 days expiration window
+    const maxAge = 30 * 24 * 60 * 60 * 1000;
+    if (Date.now() - timeNum > maxAge || timeNum > Date.now() + 60000) return null;
+
+    const expectedSig = signSession(username, timestamp);
+    const bufA = Buffer.from(signature, 'hex');
+    const bufB = Buffer.from(expectedSig, 'hex');
+    if (bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB)) {
+      return username;
+    }
+  }
+
+  return null;
 }
 
 function passwordHash(password, salt) {
@@ -394,13 +428,17 @@ async function handleLogin(request, response) {
     return json(response, 401, { error: 'Invalid unique ID or password.' });
   }
 
-  // Verify password: check preset admin or scrypt hash
+  // Verify password: check preset admin or scrypt hash (timing-safe)
   let isPasswordValid = false;
   if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
     isPasswordValid = true;
   } else if (user.salt && user.password_hash) {
     const computed = passwordHash(password, user.salt);
-    isPasswordValid = (computed === user.password_hash);
+    const bufComputed = Buffer.from(computed, 'hex');
+    const bufHash = Buffer.from(user.password_hash, 'hex');
+    if (bufComputed.length === bufHash.length && crypto.timingSafeEqual(bufComputed, bufHash)) {
+      isPasswordValid = true;
+    }
   }
 
   if (!isPasswordValid) {
@@ -535,6 +573,9 @@ async function handlePostContent(request, response) {
 /** Admin overview - exclusive to usmanianne30 */
 async function handleAdminOverview(request, response) {
   const username = cookieUser(request);
+  if (!username) {
+    return json(response, 401, { error: 'Not signed in.' });
+  }
   if (username !== ADMIN_USERNAME) {
     return json(response, 403, { error: 'Access denied. Director access only.' });
   }
@@ -903,6 +944,19 @@ const server = http.createServer(async (request, response) => {
         response.writeHead(302, { Location: '/dashboard' });
         return response.end();
       }
+    }
+
+    // 3. Direct access to /admin or /director URL: President only
+    if (pathname === '/admin' || pathname === '/director') {
+      if (!currentLoggedInUser) {
+        response.writeHead(302, { Location: '/login' });
+        return response.end();
+      }
+      if (currentLoggedInUser !== ADMIN_USERNAME) {
+        return json(response, 403, { error: 'Access denied. The Director Console is exclusive to the president account.' });
+      }
+      response.writeHead(302, { Location: '/dashboard' });
+      return response.end();
     }
 
     let filePath;

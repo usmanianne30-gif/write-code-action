@@ -207,28 +207,38 @@ btnLogout.addEventListener('click', async () => {
 
 // ─── Content Load & Auto-Save ────────────────────────────────────────────────
 
+const lastSavedContent = {};
+const pendingSaves = {};
+const retryTimers = {};
+
 async function loadSectionContent(section) {
   if (loadedSections.has(section)) return;
   try {
     const res = await fetch(`/api/content?section=${section}`);
     if (!res.ok) return;
     const data = await res.json();
+    const savedBody = data.body || '';
 
     if (section === 'write') {
-      editorWrite.value = data.body || '';
+      editorWrite.value = savedBody;
+      lastSavedContent['write'] = savedBody;
     } else if (section === 'code') {
+      const codeVal = savedBody || '# Write or paste code here\nprint("Write Code Action initialized.")\n';
       if (aceEditor) {
-        aceEditor.setValue(data.body || '# Write or paste code here\nprint("Write Code Action initialized.")\n', -1);
+        aceEditor.setValue(codeVal, -1);
       }
+      lastSavedContent['code'] = codeVal;
       if (data.language && codeLangSelect) {
         codeLangSelect.value = data.language;
         setAceMode(data.language);
       }
       updateContextDesc();
     } else if (section === 'action_theatre') {
-      editorTheatre.value = data.body || '';
+      editorTheatre.value = savedBody;
+      lastSavedContent['action_theatre'] = savedBody;
     } else if (section === 'action_anime') {
-      editorAnime.value = data.body || '';
+      editorAnime.value = savedBody;
+      lastSavedContent['action_anime'] = savedBody;
     }
 
     loadedSections.add(section);
@@ -238,31 +248,56 @@ async function loadSectionContent(section) {
   }
 }
 
-async function saveContent(section, text, panelKey, language = 'plaintext') {
-  setStatus(panelKey, 'saving', 'saving…');
+async function saveContent(section, text, panelKey, language = 'plaintext', isRetry = false) {
+  // Avoid redundant network requests if content has not changed
+  if (lastSavedContent[section] === text && !isRetry && !pendingSaves[section]) {
+    return;
+  }
+
+  clearTimeout(retryTimers[section]);
+  setStatus(panelKey, 'saving', 'SAVING...');
+
   try {
     const res = await fetch('/api/content', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ section, body: text, language })
     });
-    if (!res.ok) throw new Error();
-    setStatus(panelKey, 'saved', 'saved ✓');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    lastSavedContent[section] = text;
+    delete pendingSaves[section];
+    setStatus(panelKey, 'saved', 'SAVED ✓');
+
     setTimeout(() => {
-      if (saveStatus[panelKey]?.textContent === 'saved ✓') {
+      if (saveStatus[panelKey]?.textContent === 'SAVED ✓') {
         setStatus(panelKey, '', '');
       }
-    }, 2000);
-  } catch (_) {
-    setStatus(panelKey, 'error', 'error saving');
+    }, 2500);
+  } catch (err) {
+    console.warn(`Save failed for ${section}:`, err);
+    setStatus(panelKey, 'error', 'SAVE FAILED');
+    pendingSaves[section] = { text, panelKey, language };
+
+    // Graceful automatic retry after 3.5s while preserving local editor state
+    retryTimers[section] = setTimeout(() => {
+      if (pendingSaves[section]) {
+        saveContent(section, pendingSaves[section].text, panelKey, language, true);
+      }
+    }, 3500);
   }
 }
 
 function scheduleSave(section, text, panelKey, language) {
+  // If text is unchanged from last saved version and no failure pending, skip
+  if (lastSavedContent[section] === text && !pendingSaves[section]) {
+    return;
+  }
   clearTimeout(saveTimers[section]);
+  clearTimeout(retryTimers[section]);
   saveTimers[section] = setTimeout(() => {
     saveContent(section, text, panelKey, language);
-  }, 1200);
+  }, 1000);
 }
 
 // ─── Primary Tab Navigation (Write, Code, Action) ────────────────────────────
@@ -636,6 +671,18 @@ function appendChatMessage(role, text) {
   return bubble;
 }
 
+// Structured editor action: updates editor state cleanly through Ace API
+function applyCodeToEditor(codeText, detectedLang) {
+  if (!aceEditor) return;
+  aceEditor.setValue(codeText, 1);
+  if (detectedLang && aceModeMap[detectedLang] && codeLangSelect) {
+    codeLangSelect.value = detectedLang;
+    setAceMode(detectedLang);
+  }
+  updateContextDesc();
+  scheduleSave('code', codeText, 'code', codeLangSelect ? codeLangSelect.value : 'plaintext');
+}
+
 // Enhances code blocks in AI messages with "Insert into Editor" and "Copy" buttons
 function enhanceCodeBlocks(container) {
   const preElements = container.querySelectorAll('pre');
@@ -675,12 +722,7 @@ function enhanceCodeBlocks(container) {
     btnInsert.innerHTML = 'Insert into Editor ↗';
 
     btnInsert.addEventListener('click', () => {
-      if (!aceEditor) return;
-      aceEditor.setValue(codeText, -1);
-      if (codeLangSelect && aceModeMap[detectedLang]) {
-        codeLangSelect.value = detectedLang;
-        setAceMode(detectedLang);
-      }
+      applyCodeToEditor(codeText, detectedLang);
       btnInsert.textContent = 'Inserted ✓';
       setTimeout(() => btnInsert.textContent = 'Insert into Editor ↗', 2000);
     });

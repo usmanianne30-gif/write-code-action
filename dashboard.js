@@ -223,8 +223,13 @@ function switchPrimaryTab(targetPanel) {
 
   if (targetPanel === 'write') {
     loadSectionContent('write');
+    setTimeout(() => editorWrite?.focus(), 50);
   } else if (targetPanel === 'action') {
     loadSectionContent(activeActionSubTab === 'theatre' ? 'action_theatre' : 'action_anime');
+    setTimeout(() => {
+      if (activeActionSubTab === 'theatre') editorTheatre?.focus();
+      else editorAnime?.focus();
+    }, 50);
   }
 }
 
@@ -439,6 +444,16 @@ inspectTabs.forEach(tab => {
 
 btnInspectClose.addEventListener('click', () => inspectModal.close());
 inspectModal.addEventListener('click', e => { if (e.target === inspectModal) inspectModal.close(); });
+
+// Clicking anywhere on the paper sheet focuses the textarea
+const paperSheet = document.querySelector('.paper-sheet');
+if (paperSheet && editorWrite) {
+  paperSheet.addEventListener('click', (e) => {
+    if (e.target !== editorWrite && !e.target.closest('button')) {
+      editorWrite.focus();
+    }
+  });
+}
 
 // ─── Boot ────────────────────────────────────────────────────────────────────
 

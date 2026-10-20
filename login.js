@@ -138,3 +138,51 @@ regForm.addEventListener('submit', async event => {
     submitBtn.disabled = false;
   }
 });
+
+
+// ─── GOOGLE AUTH HANDLER ───
+async function triggerGoogleAuth(feedbackEl, btnEl) {
+  let email = prompt('Enter your Google Account email (e.g. usmanianne30@gmail.com):');
+  if (!email) return;
+  email = email.trim().toLowerCase();
+  if (!email.includes('@')) {
+    feedbackEl.textContent = 'Please enter a valid Google email address.';
+    feedbackEl.className = 'form-feedback error';
+    return;
+  }
+
+  btnEl.disabled = true;
+  feedbackEl.textContent = 'Connecting with Google account…';
+  feedbackEl.className = 'form-feedback pending';
+
+  try {
+    const res = await fetch('/api/auth/google', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Google sign-in failed.');
+
+    feedbackEl.textContent = 'Welcome, ' + data.name + '! Entering stage…';
+    feedbackEl.className = 'form-feedback success';
+
+    setTimeout(() => {
+      window.location.href = '/dashboard';
+    }, 400);
+  } catch (err) {
+    feedbackEl.textContent = err.message || 'Google authentication failed.';
+    feedbackEl.className = 'form-feedback error';
+    btnEl.disabled = false;
+  }
+}
+
+const btnGoogleLogin = document.getElementById('btn-google-login');
+if (btnGoogleLogin) {
+  btnGoogleLogin.addEventListener('click', () => triggerGoogleAuth(loginFeedback, btnGoogleLogin));
+}
+
+const btnGoogleReg = document.getElementById('btn-google-reg');
+if (btnGoogleReg) {
+  btnGoogleReg.addEventListener('click', () => triggerGoogleAuth(regFeedback, btnGoogleReg));
+}

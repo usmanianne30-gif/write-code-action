@@ -7,8 +7,8 @@
  *  - Member registration with Real Name, unique username/ID, and password.
  *  - Authentication & session cookie (wca_user).
  *  - Dedicated workspace with Write (aged paper), Code (blank), Action (Theatre Script + Anime Notebook).
- *  - Private user content: each member's writing is visible only to them, except for usmanianne30 (admin).
- *  - Admin console for usmanianne30: member directory, daily activity log, and member content inspection.
+ *  - Private user content: each member's writing is visible only to them, except for scatherinexx (president).
+ *  - Admin console for scatherinexx: member directory, daily activity log, and member content inspection.
  */
 const http = require('node:http');
 const fs = require('node:fs/promises');
@@ -35,11 +35,9 @@ function getCleanSupabaseUrl() {
 const SUPABASE_URL = getCleanSupabaseUrl();
 const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
 
-const ADMIN_USERNAME = 'usmanianne30';
-const ADMIN_PASSWORD = '301327';
-// President account — gets Members Roster sidebar panel
+const ADMIN_USERNAME = 'scatherinexx';
 const PRESIDENT_USERNAME = 'scatherinexx';
-const PRESIDENT_EMAIL    = 'usmanianne30@gmail.com';
+const PRESIDENT_EMAIL = 'usmanianne30@gmail.com';
 
 // ─── Supabase Client ────────────────────────────────────────────────────────
 
@@ -198,22 +196,17 @@ async function saveUser(user) {
 async function ensureAdminUser() {
   try {
     const users = await readUsers();
-    let admin = users.find(u => u.username === ADMIN_USERNAME);
-    if (!admin) {
-      const salt = crypto.randomBytes(16).toString('hex');
-      admin = {
-        name: 'Usman (Director)',
-        username: ADMIN_USERNAME,
-        password_hash: passwordHash(ADMIN_PASSWORD, salt),
-        salt,
-        password_fingerprint: passwordFingerprint(ADMIN_PASSWORD),
-        joined_at: new Date().toISOString(),
-        last_active_at: new Date().toISOString()
-      };
-      await saveUser(admin);
+    // Remove any legacy usmanianne30 account completely
+    const filtered = users.filter(u => u.username !== 'usmanianne30');
+    if (filtered.length !== users.length) {
+      await fs.mkdir(DATA_DIRECTORY, { recursive: true });
+      const temporaryFile = USERS_FILE + '.tmp';
+      await fs.writeFile(temporaryFile, JSON.stringify(filtered, null, 2), 'utf8');
+      await fs.rename(temporaryFile, USERS_FILE);
+      console.log('Removed legacy usmanianne30 account.');
     }
   } catch (err) {
-    console.error('Failed to initialize admin user:', err);
+    console.error('ensureAdminUser error:', err);
   }
 }
 
@@ -424,24 +417,15 @@ async function handleLogin(request, response) {
   const users = await readUsers();
   let user = users.find(u => u.username === username);
 
-  // Special check for preset admin if not found
-  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-    if (!user) {
-      await ensureAdminUser();
-      const updated = await readUsers();
-      user = updated.find(u => u.username === ADMIN_USERNAME);
-    }
-  }
+// Standard user authentication
 
   if (!user) {
     return json(response, 401, { error: 'Invalid unique ID or password.' });
   }
 
-  // Verify password: check preset admin or scrypt hash (timing-safe)
+  // Verify password using scrypt hash (timing-safe)
   let isPasswordValid = false;
-  if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-    isPasswordValid = true;
-  } else if (user.salt && user.password_hash) {
+  if (user.salt && user.password_hash) {
     const computed = passwordHash(password, user.salt);
     const bufComputed = Buffer.from(computed, 'hex');
     const bufHash = Buffer.from(user.password_hash, 'hex');
@@ -464,7 +448,8 @@ async function handleLogin(request, response) {
     ok: true,
     username: user.username,
     name: user.name || user.username,
-    isAdmin: user.username === ADMIN_USERNAME
+    isAdmin: user.username === PRESIDENT_USERNAME,
+    isPresident: user.username === PRESIDENT_USERNAME
   }, {
     'Set-Cookie': makeUserCookie(user.username)
   });
@@ -498,7 +483,7 @@ async function handleGetMe(request, response) {
   });
 }
 
-/** Get writing content - protected: user can only see their own, except usmanianne30 */
+/** Get writing content - protected: user can only see their own, except scatherinexx */
 async function handleGetContent(request, response) {
   const currentUsername = cookieUser(request);
   if (!currentUsername) return json(response, 401, { error: 'Not signed in.' });
@@ -513,7 +498,7 @@ async function handleGetContent(request, response) {
 
   let targetUsername = currentUsername;
   if (targetUserParam && targetUserParam !== currentUsername) {
-    // Only usmanianne30 is permitted to view other members' content
+    // Only scatherinexx is permitted to view other members' content
     if (currentUsername !== ADMIN_USERNAME) {
       return json(response, 403, { error: 'Access denied. You can only view your own writing.' });
     }
@@ -805,7 +790,7 @@ async function handleDeleteWork(request, response) {
   }
 }
 
-/** Admin overview - exclusive to usmanianne30 */
+/** Admin overview - exclusive to scatherinexx */
 async function handleAdminOverview(request, response) {
   const username = cookieUser(request);
   if (!username) {
@@ -1131,6 +1116,77 @@ async function handleCodeRun(request, response) {
 
 // ─── Static Server & Router ──────────────────────────────────────────────────
 
+
+/** Handle Google Sign Up / Sign In */
+async function handleGoogleAuth(request, response) {
+  let raw = '';
+  for await (const chunk of request) {
+    raw += chunk;
+    if (raw.length > 50000) return json(response, 413, { error: 'Request is too large.' });
+  }
+  let body;
+  try { body = JSON.parse(raw); } catch { return json(response, 400, { error: 'Invalid Google payload.' }); }
+
+  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
+  let name = typeof body.name === 'string' ? body.name.trim() : '';
+
+  if (!email || !email.includes('@')) {
+    return json(response, 400, { error: 'A valid email address is required.' });
+  }
+
+  const users = await readUsers();
+  const isPresidentTarget = (email === PRESIDENT_EMAIL);
+
+  let user = users.find(u => (u.email && u.email.toLowerCase() === email) || (isPresidentTarget && u.username === PRESIDENT_USERNAME));
+
+  if (!user) {
+    let username = isPresidentTarget ? PRESIDENT_USERNAME : email.split('@')[0].toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 24);
+    if (!username || username.length < 3) username = 'member_' + Date.now().toString().slice(-4);
+
+    let finalUsername = username;
+    let counter = 1;
+    while (users.some(u => u.username === finalUsername)) {
+      finalUsername = username + counter++;
+    }
+
+    if (!name) name = isPresidentTarget ? 'Anne Usmani' : finalUsername;
+
+    const dummySalt = crypto.randomBytes(16).toString('hex');
+    const dummyPass = crypto.randomBytes(32).toString('hex');
+    const now = new Date().toISOString();
+
+    user = {
+      name,
+      email,
+      username: finalUsername,
+      password_hash: passwordHash(dummyPass, dummySalt),
+      salt: dummySalt,
+      password_fingerprint: passwordFingerprint(dummyPass),
+      auth_provider: 'google',
+      joined_at: now,
+      last_active_at: now
+    };
+
+    await saveUser(user);
+    await logActivity(user.username, user.name, 'Joined via Google', 'Google account authenticated');
+  } else {
+    user.last_active_at = new Date().toISOString();
+    await saveUser(user);
+    await logActivity(user.username, user.name || user.username, 'Signed in with Google', 'Google session started');
+  }
+
+  return json(response, 200, {
+    ok: true,
+    message: 'Welcome, ' + user.name + '.',
+    username: user.username,
+    name: user.name,
+    isAdmin: user.username === PRESIDENT_USERNAME,
+    isPresident: user.username === PRESIDENT_USERNAME
+  }, {
+    'Set-Cookie': makeUserCookie(user.username)
+  });
+}
+
 /** President-only: get full member roster (name + username only) */
 async function handlePresidentRoster(request, response) {
   const username = cookieUser(request);
@@ -1167,6 +1223,7 @@ const server = http.createServer(async (request, response) => {
     const pathname = parsedUrl.pathname;
 
     // API Routes
+    if (request.method === 'POST' && pathname === '/api/auth/google') return await handleGoogleAuth(request, response);
     if (request.method === 'POST' && pathname === '/api/signup') return await handleSignUp(request, response);
     if (request.method === 'POST' && pathname === '/api/login')  return await handleLogin(request, response);
     if (request.method === 'POST' && pathname === '/api/logout') return await handleLogout(request, response);

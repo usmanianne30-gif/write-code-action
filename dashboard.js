@@ -11,7 +11,7 @@
  *    - AI Coding Assistant (Gemini Flash integration, markdown, smart code blocks)
  *    - Action bridge: "Insert into Editor ↗", "Copy", quick prompt chips, terminal error fix
  *  - Debounced auto-save per user
- *  - Director Console (exclusive to usmanianne30)
+ *  - Director Console (exclusive to president scatherinexx)
  *  - Sign Out
  */
 
@@ -244,7 +244,7 @@ async function checkAuth() {
     userId.textContent = `@${currentUser.username}`;
     userAvatar.textContent = (currentUser.name || currentUser.username).charAt(0).toUpperCase();
 
-    if (currentUser.username === 'usmanianne30' || currentUser.isAdmin) {
+    if (currentUser.username === 'scatherinexx' || currentUser.isAdmin || currentUser.isPresident) {
       btnAdminToggle.hidden = false;
     }
     // Reveal 04 MEMBERS tab only for the president account
@@ -1319,7 +1319,7 @@ btnClearChat?.addEventListener('click', () => {
   }
 });
 
-// ─── Director's Console (Exclusive to usmanianne30) ──────────────────────────
+// ─── Director's Console (Exclusive to president scatherinexx) ──────────────────────────
 
 async function fetchAdminOverview() {
   try {

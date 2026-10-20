@@ -38,3 +38,43 @@ form.addEventListener('submit', async event => {
       ? 'The club server is not connected yet.' : error.message;
   } finally { submit.disabled = false; }
 });
+
+
+// Handle Google Sign-In / Sign-Up
+const btnGoogle = document.getElementById('btn-google-signup');
+if (btnGoogle) {
+  btnGoogle.addEventListener('click', async () => {
+    let email = prompt('Enter your Google Account email (e.g. usmanianne30@gmail.com):');
+    if (!email) return;
+    email = email.trim().toLowerCase();
+    if (!email.includes('@')) {
+      message.style.color = '#b92720';
+      message.textContent = 'Please enter a valid email address.';
+      return;
+    }
+
+    btnGoogle.disabled = true;
+    message.style.color = '#6a6259';
+    message.textContent = 'Authenticating with Google account…';
+
+    try {
+      const response = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Google authentication failed.');
+
+      message.style.color = '#2e7d32';
+      message.textContent = 'Welcome, ' + result.name + '! Entering stage…';
+      setTimeout(() => {
+        window.location.href = '/dashboard';
+      }, 400);
+    } catch (err) {
+      message.style.color = '#b92720';
+      message.textContent = err.message;
+      btnGoogle.disabled = false;
+    }
+  });
+}

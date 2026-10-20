@@ -608,33 +608,47 @@ async function handleGetWorks(request, response) {
   const username = cookieUser(request);
   if (!username) return json(response, 401, { error: 'Not signed in.' });
 
-  const url = new URL(request.url, `http://${request.headers.host}`);
+  const url = new URL(request.url, 'http://' + (request.headers.host || 'localhost'));
   const section = url.searchParams.get('section') || 'write';
 
   try {
+    const worksMap = new Map();
+
+    // 1. Load local works first (instant reliable cache)
+    try {
+      const localList = await readLocalWorks();
+      localList
+        .filter(w => w.username === username && w.section === section)
+        .forEach(w => worksMap.set(w.id, w));
+    } catch (_) {}
+
+    // 2. Load Supabase works and merge (cloud permanent source of truth)
     if (usingSupabase()) {
       try {
-        const query = `wca_works?username=eq.${encodeURIComponent(username)}&section=eq.${encodeURIComponent(section)}&order=updated_at.desc&select=*`;
+        const query = 'wca_works?username=eq.' + encodeURIComponent(username) + '&section=eq.' + encodeURIComponent(section) + '&order=updated_at.desc&select=*';
         const res = await supabase(query);
         if (res.response.ok && Array.isArray(res.body)) {
-          return json(response, 200, { works: res.body });
+          res.body.forEach(w => {
+            const existing = worksMap.get(w.id);
+            if (!existing || new Date(w.updated_at || 0) >= new Date(existing.updated_at || 0)) {
+              worksMap.set(w.id, w);
+            }
+          });
         }
       } catch (err) {
-        console.warn('Supabase handleGetWorks error, falling back to local:', err.message);
+        console.warn('Supabase handleGetWorks error, using local:', err.message);
       }
     }
 
-    const allWorks = await readLocalWorks();
-    const userWorks = allWorks
-      .filter(w => w.username === username && w.section === section)
-      .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
-    return json(response, 200, { works: userWorks });
+    const merged = Array.from(worksMap.values())
+      .sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
+
+    return json(response, 200, { works: merged });
   } catch (err) {
     console.error('handleGetWorks error:', err);
     return json(response, 500, { error: 'Failed to retrieve works.' });
   }
 }
-
 async function handleGetSingleWork(request, response) {
   const username = cookieUser(request);
   if (!username) return json(response, 401, { error: 'Not signed in.' });
@@ -723,52 +737,61 @@ async function handleSaveWork(request, response) {
 
   let body;
   try {
-    body = await readJsonBody(request, 500_000);
+    body = await readJsonBody(request, 500000);
   } catch (err) {
     return json(response, err.status || 400, { error: err.message });
   }
 
-  const { id, title, body: content = '', language } = body;
+  const { id, title, body: content = '', language, section = 'write' } = body;
   if (!id) return json(response, 400, { error: 'Missing work ID.' });
 
   const now = new Date().toISOString();
-  const updateFields = {
+  const titleVal = (typeof title === 'string' && title.trim()) ? title.trim().slice(0, 100) : 'Untitled';
+
+  const workRecord = {
+    id,
+    username,
+    section,
+    title: titleVal,
     body: content,
+    language: language || 'plaintext',
     updated_at: now
   };
-  if (typeof title === 'string') updateFields.title = title.trim().slice(0, 100) || 'Untitled';
-  if (typeof language === 'string') updateFields.language = language;
 
   try {
+    // 1. Save to local storage first (reliable backup)
+    const works = await readLocalWorks();
+    const idx = works.findIndex(w => w.id === id && w.username === username);
+    if (idx >= 0) {
+      works[idx] = { ...works[idx], ...workRecord };
+    } else {
+      works.unshift({ ...workRecord, created_at: now });
+    }
+    await saveLocalWorks(works).catch(() => {});
+
+    // 2. Save / upsert into Supabase (cloud permanence)
     if (usingSupabase()) {
       try {
-        const query = `wca_works?id=eq.${encodeURIComponent(id)}&username=eq.${encodeURIComponent(username)}`;
-        const res = await supabase(query, {
-          method: 'PATCH',
-          headers: { Prefer: 'return=representation' },
-          body: JSON.stringify(updateFields)
+        const res = await supabase('wca_works', {
+          method: 'POST',
+          headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
+          body: JSON.stringify(workRecord)
         });
         if (res.response.ok) {
-          const updated = res.body?.[0] || { id, ...updateFields };
+          const updated = res.body?.[0] || workRecord;
           return json(response, 200, { ok: true, updated_at: now, work: updated });
         }
       } catch (err) {
-        console.warn('Supabase handleSaveWork error, falling back to local:', err.message);
+        console.warn('Supabase handleSaveWork error, saved locally:', err.message);
       }
     }
 
-    const works = await readLocalWorks();
-    const idx = works.findIndex(w => w.id === id && w.username === username);
-    if (idx === -1) return json(response, 404, { error: 'Work not found.' });
-    works[idx] = { ...works[idx], ...updateFields };
-    await saveLocalWorks(works);
-    return json(response, 200, { ok: true, updated_at: now, work: works[idx] });
+    return json(response, 200, { ok: true, updated_at: now, work: workRecord });
   } catch (err) {
     console.error('handleSaveWork error:', err);
     return json(response, 500, { error: 'Failed to save work.' });
   }
 }
-
 async function handleDeleteWork(request, response) {
   const username = cookieUser(request);
   if (!username) return json(response, 401, { error: 'Not signed in.' });

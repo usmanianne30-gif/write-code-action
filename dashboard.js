@@ -379,6 +379,32 @@ function scheduleSave(section, text, panelKey, language) {
 
 // ─── Pre-Existing Saved Works Management (Write, Code, Action) ───────────────
 
+// ─── LocalStorage Persistence Helpers ─────────────────────────────────────────
+
+function getStorageKey(section) {
+  const uid = currentUser?.username || 'member';
+  return 'wca_works_' + uid + '_' + section;
+}
+
+function getLocalWorksCache(section) {
+  try {
+    const raw = localStorage.getItem(getStorageKey(section));
+    if (!raw) return [];
+    const list = JSON.parse(raw);
+    return Array.isArray(list) ? list : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function setLocalWorksCache(section, works) {
+  try {
+    localStorage.setItem(getStorageKey(section), JSON.stringify(works));
+  } catch (e) {
+    console.warn('localStorage cache write failed:', e);
+  }
+}
+
 function timeAgo(dateString) {
   if (!dateString) return 'Just now';
   const now = new Date();
@@ -396,21 +422,44 @@ function timeAgo(dateString) {
 }
 
 async function fetchWorksForSection(section) {
-  if (sidebarWorksList) sidebarWorksList.innerHTML = '<div class="db-sidebar-empty">Loading saved works…</div>';
-  if (worksGrid) worksGrid.innerHTML = '<div class="db-sidebar-empty" style="grid-column: 1/-1;">Loading pre-existing works…</div>';
+  // 1. Instantly render from local cache so works NEVER disappear
+  const cached = getLocalWorksCache(section);
+  if (cached.length > 0) {
+    currentWorks = cached;
+    renderSidebarWorksList();
+    renderGalleryGrid();
+  } else {
+    if (sidebarWorksList) sidebarWorksList.innerHTML = '<div class="db-sidebar-empty">Loading saved works…</div>';
+    if (worksGrid) worksGrid.innerHTML = '<div class="db-sidebar-empty" style="grid-column: 1/-1;">Loading saved works…</div>';
+  }
 
+  // 2. Fetch latest from server and merge
   try {
-    const res = await fetch(`/api/works?section=${section}`);
+    const res = await fetch('/api/works?section=' + encodeURIComponent(section));
     if (!res.ok) throw new Error('Could not load works');
     const data = await res.json();
-    currentWorks = data.works || [];
+    const serverWorks = data.works || [];
+
+    const map = new Map();
+    serverWorks.forEach(w => map.set(w.id, w));
+    cached.forEach(w => {
+      const existing = map.get(w.id);
+      if (!existing || new Date(w.updated_at || 0) > new Date(existing.updated_at || 0)) {
+        map.set(w.id, w);
+      }
+    });
+
+    currentWorks = Array.from(map.values()).sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0));
+    setLocalWorksCache(section, currentWorks);
 
     renderSidebarWorksList();
     renderGalleryGrid();
   } catch (err) {
-    console.error('fetchWorksForSection error:', err);
-    if (sidebarWorksList) sidebarWorksList.innerHTML = '<div class="db-sidebar-empty">No saved works yet</div>';
-    if (worksGrid) worksGrid.innerHTML = '<div class="db-sidebar-empty" style="grid-column: 1/-1;">No pre-existing works saved yet. Click "+ Create New" to begin!</div>';
+    console.warn('fetchWorksForSection server error, rendered from local storage:', err);
+    if (!currentWorks.length) {
+      if (sidebarWorksList) sidebarWorksList.innerHTML = '<div class="db-sidebar-empty">No saved works yet</div>';
+      if (worksGrid) worksGrid.innerHTML = '<div class="db-sidebar-empty" style="grid-column: 1/-1;">No pre-existing works saved yet. Click "+ Create New" to begin!</div>';
+    }
   }
 }
 
@@ -612,7 +661,7 @@ function openWorkInEditor(work) {
 async function saveActiveWork() {
   if (!activeWork) return;
 
-  const title = (workTitleInput ? workTitleInput.value : activeWork.title || 'Untitled').trim();
+  const title = (workTitleInput ? workTitleInput.value : activeWork.title || 'Untitled').trim() || 'Untitled';
   let body = '';
   let language = 'plaintext';
 
@@ -625,6 +674,20 @@ async function saveActiveWork() {
     body = activeActionSubTab === 'theatre' ? (editorTheatre ? editorTheatre.value : '') : (editorAnime ? editorAnime.value : '');
   }
 
+  const now = new Date().toISOString();
+  activeWork.title = title;
+  activeWork.body = body;
+  activeWork.language = language;
+  activeWork.section = currentSection;
+  activeWork.updated_at = now;
+
+  // Immediately save in memory array and localStorage (permanent client preservation)
+  const idx = currentWorks.findIndex(w => w.id === activeWork.id);
+  if (idx !== -1) currentWorks[idx] = { ...activeWork };
+  else currentWorks.unshift({ ...activeWork });
+  setLocalWorksCache(currentSection, currentWorks);
+  renderSidebarWorksList();
+
   if (workSaveStatus) {
     workSaveStatus.textContent = 'saving…';
     workSaveStatus.className = 'db-save-status saving';
@@ -636,6 +699,7 @@ async function saveActiveWork() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         id: activeWork.id,
+        section: currentSection,
         title,
         body,
         language
@@ -644,29 +708,21 @@ async function saveActiveWork() {
     if (!res.ok) throw new Error('Save failed');
     const result = await res.json();
 
-    activeWork.title = title;
-    activeWork.body = body;
-    activeWork.language = language;
-    activeWork.updated_at = result.updated_at || new Date().toISOString();
-
-    const idx = currentWorks.findIndex(w => w.id === activeWork.id);
-    if (idx !== -1) currentWorks[idx] = { ...activeWork };
+    if (result.work?.updated_at) activeWork.updated_at = result.work.updated_at;
+    setLocalWorksCache(currentSection, currentWorks);
 
     if (workSaveStatus) {
       workSaveStatus.textContent = 'saved ✓';
       workSaveStatus.className = 'db-save-status saved';
     }
-
-    renderSidebarWorksList();
   } catch (err) {
-    console.error('saveActiveWork error:', err);
+    console.warn('saveActiveWork server sync warning (saved locally):', err);
     if (workSaveStatus) {
-      workSaveStatus.textContent = 'error saving';
-      workSaveStatus.className = 'db-save-status error';
+      workSaveStatus.textContent = 'saved locally ✓';
+      workSaveStatus.className = 'db-save-status saved';
     }
   }
 }
-
 function scheduleActiveWorkSave() {
   if (!activeWork) return;
   if (workSaveStatus) {
@@ -690,6 +746,7 @@ async function deleteWork(workId, title) {
     if (!res.ok) throw new Error('Failed to delete work');
 
     currentWorks = currentWorks.filter(w => w.id !== workId);
+    setLocalWorksCache(currentSection, currentWorks);
 
     if (activeWork && activeWork.id === workId) {
       showGalleryView();
@@ -798,8 +855,8 @@ btnSidebarCreate?.addEventListener('click', createNewWork);
 btnGalleryCreate?.addEventListener('click', createNewWork);
 
 // Editor toolbar buttons
-btnBackToGallery?.addEventListener('click', () => {
-  saveActiveWork();
+btnBackToGallery?.addEventListener('click', async () => {
+  await saveActiveWork();
   showGalleryView();
 });
 
@@ -1467,3 +1524,26 @@ if (paperSheet && editorWrite) {
 // ─── Boot ────────────────────────────────────────────────────────────────────
 
 checkAuth();
+
+
+// Ensure active draft is immediately preserved before tab closes or reloads
+window.addEventListener('beforeunload', () => {
+  if (activeWork) {
+    const title = (workTitleInput ? workTitleInput.value : activeWork.title || 'Untitled').trim() || 'Untitled';
+    let body = '';
+    if (currentSection === 'write') {
+      body = editorWrite ? editorWrite.value : '';
+    } else if (currentSection === 'code') {
+      body = aceEditor ? aceEditor.getValue() : '';
+    } else if (currentSection === 'action') {
+      body = activeActionSubTab === 'theatre' ? (editorTheatre ? editorTheatre.value : '') : (editorAnime ? editorAnime.value : '');
+    }
+    activeWork.title = title;
+    activeWork.body = body;
+    activeWork.updated_at = new Date().toISOString();
+    const idx = currentWorks.findIndex(w => w.id === activeWork.id);
+    if (idx !== -1) currentWorks[idx] = { ...activeWork };
+    else currentWorks.unshift({ ...activeWork });
+    setLocalWorksCache(currentSection, currentWorks);
+  }
+});

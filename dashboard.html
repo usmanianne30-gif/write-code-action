@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#10141d" />
-    <title>Workspace — Write Code Action</title>
+    <title>Studio Workspace — Write Code Action</title>
     <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="dashboard.css" />
     <!-- Ace Editor & Marked.js for Code Workspace & AI Chat -->
@@ -12,311 +12,393 @@
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/pyodide/v0.26.1/full/pyodide.js"></script>
   </head>
-  <body>
+  <body class="dashboard-body">
     <div class="grain" aria-hidden="true"></div>
 
-    <!-- ── Dashboard Header ── -->
-    <header class="db-header">
-      <div class="db-header-left">
-        <a class="brand" href="/" aria-label="Write Code Action home">
-          <span>W</span><span>C</span><span>A</span>
-        </a>
-        <div class="db-user-badge" id="db-user-badge">
-          <span class="user-avatar" id="user-avatar">?</span>
-          <div class="user-meta">
-            <span class="user-real-name" id="user-real-name">Loading…</span>
-            <span class="user-id" id="user-id">@...</span>
-          </div>
-        </div>
-      </div>
-
-      <div class="db-header-right">
-        <!-- Admin toggle button: strictly visible only for usmanianne30 -->
-        <button id="btn-admin-toggle" class="btn-admin-drawer" hidden aria-label="Open Director Console">
-          <span class="pulse-dot"></span>
-          <span>Director's Console</span>
-        </button>
-
-        <button id="btn-logout" class="btn-logout" aria-label="Sign out">
-          <span>Sign Out</span>
-        </button>
-      </div>
-    </header>
-
-    <!-- ── Three Primary Options: Write, Code, Action ── -->
-    <nav class="db-tabs" aria-label="Workspace modes">
-      <button class="db-tab active" data-panel="write" id="tab-btn-write" aria-selected="true">
-        <span class="db-tab-num">01</span> Write
-      </button>
-      <button class="db-tab" data-panel="code" id="tab-btn-code" aria-selected="false">
-        <span class="db-tab-num">02</span> Code
-      </button>
-      <button class="db-tab" data-panel="action" id="tab-btn-action" aria-selected="false">
-        <span class="db-tab-num">03</span> Action
-      </button>
-    </nav>
-
-    <!-- ── Main Workspace ── -->
-    <main class="db-main">
-
+    <div class="db-app-layout">
       <!-- ════════════════════════════════════════════════════════
-           1. WRITE PANEL (Aged, slightly yellowed vintage paper)
+           SIDEBAR: Photo-Accurate Tabs (01 WRITE, 02 CODE, 03 ACTION)
            ════════════════════════════════════════════════════════ -->
-      <section class="db-panel db-panel--write active" id="panel-write" aria-label="Write workspace">
-        <div class="paper-desk">
-          <div class="paper-sheet paper-aged">
-            <div class="paper-sheet-header">
-              <div class="paper-vintage-meta">
-                <span class="paper-stamp">WCA MANUSCRIPT · DRAFT</span>
-                <span class="paper-rule-date" id="write-current-date"></span>
-              </div>
-              <span class="db-save-status" id="save-write" aria-live="polite"></span>
-            </div>
-
-            <!-- Blank, free-form typable aged paper -->
-            <textarea
-              id="editor-write"
-              class="paper-editor"
-              placeholder="A blank page of old paper. Type freely in any format—stories, essays, scenes, raw thoughts…"
-              spellcheck="true"
-              aria-label="Story and thoughts editor"
-            ></textarea>
-
-            <div class="paper-footer-bar">
-              <span class="word-counter" id="words-write">0 words</span>
-              <span class="paper-watermark">ARCHIVAL PAPER · SOLE AUTHOR PRIVACY</span>
+      <aside class="db-sidebar" aria-label="Studio Navigation">
+        <!-- Brand & User Profile -->
+        <div class="db-sidebar-header">
+          <a class="brand" href="/" aria-label="Write Code Action home">
+            <span>W</span><span>C</span><span>A</span>
+          </a>
+          <div class="db-user-badge" id="db-user-badge">
+            <span class="user-avatar" id="user-avatar">?</span>
+            <div class="user-meta">
+              <span class="user-real-name" id="user-real-name">Loading…</span>
+              <span class="user-id" id="user-id">@...</span>
             </div>
           </div>
         </div>
-      </section>
+
+        <!-- The exact tabs from the photo formatted as sidebar navigation -->
+        <nav class="db-side-nav" aria-label="Workspace Modes">
+          <button class="db-side-tab active" data-panel="write" id="tab-btn-write" aria-selected="true">
+            <span class="db-tab-num">01</span>
+            <span class="db-tab-label">WRITE</span>
+            <span class="db-active-indicator" aria-hidden="true"></span>
+          </button>
+          <button class="db-side-tab" data-panel="code" id="tab-btn-code" aria-selected="false">
+            <span class="db-tab-num">02</span>
+            <span class="db-tab-label">CODE</span>
+            <span class="db-active-indicator" aria-hidden="true"></span>
+          </button>
+          <button class="db-side-tab" data-panel="action" id="tab-btn-action" aria-selected="false">
+            <span class="db-tab-num">03</span>
+            <span class="db-tab-label">ACTION</span>
+            <span class="db-active-indicator" aria-hidden="true"></span>
+          </button>
+        </nav>
+
+        <!-- Sidebar Action: "Create New" Options Button -->
+        <div class="db-side-create-box">
+          <button class="db-btn-create" id="btn-sidebar-create">
+            <span class="db-plus">+</span>
+            <span id="btn-create-label">Create New Story</span>
+          </button>
+        </div>
+
+        <!-- Sidebar List of Pre-existing Saved Works -->
+        <div class="db-side-works-box">
+          <div class="db-side-works-header">
+            <span class="db-subheading" id="sidebar-works-heading">SAVED STORIES</span>
+            <span class="db-works-count" id="sidebar-works-count">0</span>
+          </div>
+          <div class="db-sidebar-works-list" id="sidebar-works-list">
+            <div class="db-sidebar-empty">Loading saved works…</div>
+          </div>
+        </div>
+
+        <!-- Sidebar Footer -->
+        <div class="db-sidebar-footer">
+          <!-- Admin toggle button: strictly visible only for usmanianne30 -->
+          <button id="btn-admin-toggle" class="btn-admin-drawer" hidden aria-label="Open Director Console">
+            <span class="pulse-dot"></span>
+            <span>Director Console</span>
+          </button>
+
+          <div class="db-sidebar-bottom-row">
+            <a href="/" class="db-sub-link">← Home</a>
+            <button id="btn-logout" class="db-sub-link db-logout-btn" aria-label="Sign out">Sign Out</button>
+          </div>
+        </div>
+      </aside>
 
       <!-- ════════════════════════════════════════════════════════
-           2. CODE PANEL — AI Coding Workspace (Editor & Chatbot)
+           MAIN CENTRE PAGE
            ════════════════════════════════════════════════════════ -->
-      <section class="db-panel db-panel--code" id="panel-code" aria-label="Code workspace" hidden>
-        <div class="ai-coding-workspace">
-          <!-- ── LEFT SECTION: CODE EDITOR & RUNNER ── -->
-          <div class="code-editor-section">
-            <div class="code-toolbar">
-              <div class="code-toolbar-left">
-                <label for="code-lang-select" class="toolbar-label">Language:</label>
-                <select id="code-lang-select" class="code-select" aria-label="Select programming language">
-                  <option value="python">Python</option>
-                  <option value="javascript">JavaScript</option>
-                  <option value="typescript">TypeScript</option>
-                  <option value="cpp">C++</option>
-                  <option value="c">C</option>
-                  <option value="java">Java</option>
-                  <option value="go">Go</option>
-                  <option value="rust">Rust</option>
-                  <option value="html">HTML</option>
-                  <option value="css">CSS</option>
-                  <option value="sql">SQL</option>
-                </select>
-                <button type="button" id="btn-run-code" class="btn-code-run" aria-label="Run Code">
-                  <span class="run-play-icon">▶</span> Run Code
-                </button>
-                <button type="button" id="btn-clear-code" class="btn-code-secondary">
-                  Clear
-                </button>
-              </div>
-              <div class="code-toolbar-right">
-                <span class="db-save-status" id="save-code" aria-live="polite"></span>
-              </div>
-            </div>
+      <main class="db-center-main" id="db-center-main">
 
-            <!-- ACE Editor Mounting Surface -->
-            <div class="ace-wrapper">
-              <div id="ace-editor-box" class="ace-editor-surface"></div>
+        <!-- ── VIEW 1: Centre Pre-Existing Works Gallery ── -->
+        <section class="db-gallery-view active" id="gallery-view">
+          <header class="db-gallery-header">
+            <div>
+              <p class="eyebrow" id="gallery-eyebrow">01 / WRITE</p>
+              <h1 class="db-gallery-title" id="gallery-title">Your Stories &amp; Worlds</h1>
+              <p class="db-gallery-desc" id="gallery-desc">Every game begins in the margins. Revisit, continue, or create new stories.</p>
             </div>
-
-            <!-- Terminal / Output Console -->
-            <div class="terminal-drawer" id="terminal-drawer">
-              <div class="terminal-header">
-                <div class="terminal-meta">
-                  <span class="terminal-prompt-icon">›_</span>
-                  <span class="terminal-title">TERMINAL OUTPUT</span>
-                  <span class="terminal-badge" id="terminal-status-badge">Ready</span>
-                </div>
-                <div class="terminal-actions">
-                  <button type="button" class="btn-term-action" id="btn-fix-with-ai" hidden>
-                    ⚡ Fix with AI
-                  </button>
-                  <button type="button" class="btn-term-action" id="btn-clear-terminal">
-                    Clear
-                  </button>
-                </div>
-              </div>
-              <pre class="terminal-console" id="terminal-output-text">$ Ready. Choose your language and click "Run Code" to execute.</pre>
-            </div>
-          </div>
-
-          <!-- ── RIGHT SECTION: AI CODING CHATBOT ── -->
-          <div class="ai-assistant-section">
-            <div class="ai-header">
-              <div class="ai-header-info">
-                <span class="ai-pulse-dot"></span>
-                <span class="ai-title">WCA CODE AI</span>
-                <span class="ai-model-tag" id="ai-model-tag">Gemini Flash</span>
-              </div>
-              <button type="button" class="btn-clear-chat" id="btn-clear-chat" title="Clear conversation">
-                Clear
+            <div class="db-gallery-actions">
+              <button class="cta db-cta-new" id="btn-gallery-create">
+                <span id="gallery-create-label">+ Create New Story</span>
               </button>
             </div>
+          </header>
 
-            <!-- Context Awareness Strip -->
-            <div class="ai-context-strip" id="ai-context-strip">
-              <span class="context-pill" id="context-lang-pill">Python</span>
-              <span class="context-desc" id="context-desc">Editor in scope</span>
+          <div class="db-works-container">
+            <div class="db-works-header-bar">
+              <h2 class="db-works-section-title">Pre-Existing Works</h2>
+              <span class="db-save-pill">Permanently saved to database</span>
+            </div>
+            <div class="db-works-grid" id="works-grid">
+              <!-- Dynamically populated cards for all saved works -->
+            </div>
+          </div>
+        </section>
+
+        <!-- ── VIEW 2: Active Work Editor ── -->
+        <section class="db-editor-view" id="editor-view" hidden>
+          <!-- Top Editor Toolbar -->
+          <div class="db-editor-topbar">
+            <button class="db-btn-back" id="btn-back-to-gallery" title="Back to saved works">
+              ← All Works
+            </button>
+
+            <!-- Editable Work Title -->
+            <div class="db-title-wrap">
+              <input
+                type="text"
+                id="work-title-input"
+                class="db-work-title-input"
+                placeholder="Untitled Work"
+                maxlength="100"
+                aria-label="Work title"
+              />
             </div>
 
-            <!-- Chat Message Feed -->
-            <div class="ai-chat-thread" id="ai-chat-thread">
-              <div class="ai-message ai-message--assistant">
-                <div class="msg-avatar">AI</div>
-                <div class="msg-bubble">
-                  <p>Welcome to the <strong>WCA Coding Workspace</strong>.</p>
-                  <p>I can help you:</p>
-                  <ul>
-                    <li>Generate algorithms and applications from natural language prompts</li>
-                    <li>Debug errors directly from your terminal output</li>
-                    <li>Explain, optimize, or translate code into other languages</li>
-                  </ul>
-                  <p>Try asking: <em>"Write a Python program that sorts a list using merge sort."</em></p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Quick Action Chips -->
-            <div class="ai-quick-chips">
-              <button type="button" class="chip-btn" data-prompt="Explain my code.">Explain my code</button>
-              <button type="button" class="chip-btn" data-prompt="Find the bug in my code and fix it.">Find Bug</button>
-              <button type="button" class="chip-btn" data-prompt="Optimize this.">Optimize this</button>
-              <button type="button" class="chip-btn" data-prompt="Convert this to Java.">Convert to Java</button>
-              <button type="button" class="chip-btn" data-prompt="Add comments to my code.">Add comments</button>
-              <button type="button" class="chip-btn" data-prompt="Write tests for this.">Write tests</button>
-            </div>
-
-            <!-- Chat Input Area -->
-            <form class="ai-input-form" id="ai-chat-form">
-              <textarea
-                id="ai-prompt-input"
-                class="ai-prompt-textarea"
-                placeholder="Ask AI to write, fix, or explain code… (Shift+Enter for newline)"
-                rows="1"
-              ></textarea>
-              <button type="submit" class="btn-ai-submit" id="btn-ai-submit" aria-label="Send to AI">
-                <span>↑</span>
+            <div class="db-editor-controls">
+              <!-- Auto-save status pill -->
+              <span class="db-save-status" id="work-save-status">saved ✓</span>
+              <button class="db-btn-trash" id="btn-delete-work" title="Delete this work">
+                🗑 Delete
               </button>
-            </form>
-          </div>
-        </div>
-      </section>
-
-      <!-- ════════════════════════════════════════════════════════
-           3. ACTION PANEL (Two options: Theatre Script & Animation Notebook)
-           ════════════════════════════════════════════════════════ -->
-      <section class="db-panel db-panel--action" id="panel-action" aria-label="Action workspace" hidden>
-        
-        <!-- Action Sub-Selector Bar -->
-        <div class="action-subnav-bar">
-          <div class="action-options-group" role="tablist" aria-label="Action formats">
-            <button type="button" class="action-sub-btn active" id="sub-btn-theatre" role="tab" aria-selected="true" aria-controls="action-view-theatre">
-              <span class="sub-icon">🎭</span> 1. Theatre Script Writing
-            </button>
-            <button type="button" class="action-sub-btn" id="sub-btn-anime" role="tab" aria-selected="false" aria-controls="action-view-anime">
-              <span class="sub-icon">📓</span> 2. Animation / Anime Composition Notebook
-            </button>
-          </div>
-          <span class="db-save-status" id="save-action" aria-live="polite"></span>
-        </div>
-
-        <div class="action-views-container">
-
-          <!-- OPTION 1: THEATRE SCRIPT FORMAT -->
-          <div class="action-view active" id="action-view-theatre" role="tabpanel">
-            <div class="theatre-stage-wrapper">
-              <!-- Formatting helper ribbon -->
-              <div class="theatre-tools">
-                <span class="tool-label">STAGEPLAY FORMAT:</span>
-                <button type="button" class="script-tag-btn" data-insert="ACT I&#10;">+ Act</button>
-                <button type="button" class="script-tag-btn" data-insert="SCENE 1&#10;">+ Scene</button>
-                <button type="button" class="script-tag-btn" data-insert="[AT RISE: ]&#10;">+ At Rise</button>
-                <button type="button" class="script-tag-btn" data-insert="CHARACTER NAME&#10;">+ Character</button>
-                <button type="button" class="script-tag-btn" data-insert="    (stage direction)&#10;">+ Direction</button>
-                <button type="button" class="script-tag-btn" data-insert="[BLACKOUT / CURTAIN]&#10;">+ Blackout</button>
-              </div>
-
-              <div class="theatre-manuscript-card">
-                <div class="theatre-manuscript-top">
-                  <span class="script-header-title">THEATRICAL PLAYWRITING MANUSCRIPT</span>
-                  <span class="script-header-spec">STANDARD DRAMATISTS FORMAT</span>
-                </div>
-                <textarea
-                  id="editor-theatre"
-                  class="theatre-script-editor"
-                  placeholder="ACT I&#10;&#10;SCENE 1&#10;&#10;[AT RISE: Early evening. A warm solitary lamp illuminates a wooden desk cluttering manuscripts and sketches. Silence, except for the rain.]&#10;&#10;ELENA&#10;    (stepping into the circle of light)&#10;We were never meant to keep quiet backstage.&#10;&#10;MARCUS&#10;    (without looking up)&#10;Then read the lines they haven't written yet."
-                  spellcheck="true"
-                  aria-label="Theatre script editor"
-                ></textarea>
-                <div class="script-footer">
-                  <span id="words-theatre">0 words</span>
-                  <span>THEATRE FORMAT: DIALOGUE INDENTED · UPPERCASE HEADINGS</span>
-                </div>
-              </div>
             </div>
           </div>
 
-          <!-- OPTION 2: COMPOSITION NOTEBOOK FOR ANIME / ANIMATION IDEAS -->
-          <div class="action-view" id="action-view-anime" role="tabpanel" hidden>
-            <div class="comp-notebook-desk">
-              <div class="composition-book">
-                <!-- Classic marbled spine left -->
-                <div class="comp-spine">
-                  <div class="spine-texture"></div>
-                  <span class="spine-label">WCA · ANIME REEL</span>
-                </div>
+          <!-- Canvases Container -->
+          <div class="db-canvases-container">
 
-                <!-- Ruled composition paper inside -->
-                <div class="comp-page">
-                  <div class="comp-header-box">
-                    <div class="comp-title-line">
-                      <label>SERIES / PROJECT:</label>
-                      <input type="text" id="comp-series-title" class="comp-input" placeholder="e.g. Project Astral Echo (Anime Concept)" />
+            <!-- ════════════════════════════════════════════════════════
+                 1. WRITE PANEL (Aged, slightly yellowed vintage paper)
+                 ════════════════════════════════════════════════════════ -->
+            <section class="db-panel db-panel--write active" id="panel-write" aria-label="Write workspace">
+              <div class="paper-desk">
+                <div class="paper-sheet paper-aged">
+                  <div class="paper-sheet-header">
+                    <div class="paper-vintage-meta">
+                      <span class="paper-stamp">WCA MANUSCRIPT · DRAFT</span>
+                      <span class="paper-rule-date" id="write-current-date"></span>
                     </div>
-                    <div class="comp-meta-row">
-                      <span>ANIMATION / SAKUGA / BEATS NOTEBOOK</span>
-                      <span id="anime-date-stamp">COMPOSITION VOL. 1</span>
+                    <span class="db-save-status" id="save-write" aria-live="polite"></span>
+                  </div>
+
+                  <!-- Blank, free-form typable aged paper -->
+                  <textarea
+                    id="editor-write"
+                    class="paper-editor"
+                    placeholder="A blank page of old paper. Type freely in any format—stories, essays, scenes, raw thoughts…"
+                    spellcheck="true"
+                    aria-label="Story and thoughts editor"
+                  ></textarea>
+
+                  <div class="paper-footer-bar">
+                    <span class="word-counter" id="words-write">0 words</span>
+                    <span class="paper-watermark">ARCHIVAL PAPER · SOLE AUTHOR PRIVACY</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- ════════════════════════════════════════════════════════
+                 2. CODE PANEL — AI Coding Workspace (Editor & Chatbot)
+                 ════════════════════════════════════════════════════════ -->
+            <section class="db-panel db-panel--code" id="panel-code" aria-label="Code workspace" hidden>
+              <div class="ai-coding-workspace">
+                <!-- ── LEFT SECTION: CODE EDITOR & RUNNER ── -->
+                <div class="code-editor-section">
+                  <div class="code-toolbar">
+                    <div class="code-toolbar-left">
+                      <label for="code-lang-select" class="toolbar-label">Language:</label>
+                      <select id="code-lang-select" class="code-select" aria-label="Select programming language">
+                        <option value="python">Python</option>
+                        <option value="javascript">JavaScript</option>
+                        <option value="typescript">TypeScript</option>
+                        <option value="cpp">C++</option>
+                        <option value="c">C</option>
+                        <option value="java">Java</option>
+                        <option value="go">Go</option>
+                        <option value="rust">Rust</option>
+                        <option value="html">HTML</option>
+                        <option value="css">CSS</option>
+                        <option value="sql">SQL</option>
+                      </select>
+                      <button type="button" id="btn-run-code" class="btn-code-run" aria-label="Run Code">
+                        <span class="run-play-icon">▶</span> Run Code
+                      </button>
+                      <button type="button" id="btn-clear-code" class="btn-code-secondary">
+                        Clear
+                      </button>
+                    </div>
+                    <div class="code-toolbar-right">
+                      <span class="db-save-status" id="save-code" aria-live="polite"></span>
                     </div>
                   </div>
 
-                  <div class="comp-ruled-area">
-                    <div class="comp-margin-line"></div>
+                  <!-- ACE Editor Mounting Surface -->
+                  <div class="ace-wrapper">
+                    <div id="ace-editor-box" class="ace-editor-surface"></div>
+                  </div>
+
+                  <!-- Terminal / Output Console -->
+                  <div class="terminal-drawer" id="terminal-drawer">
+                    <div class="terminal-header">
+                      <div class="terminal-meta">
+                        <span class="terminal-prompt-icon">›_</span>
+                        <span class="terminal-title">TERMINAL OUTPUT</span>
+                        <span class="terminal-badge" id="terminal-status-badge">Ready</span>
+                      </div>
+                      <div class="terminal-actions">
+                        <button type="button" class="btn-terminal-action" id="btn-fix-with-ai" hidden title="Send error trace to AI Coding Assistant">
+                          <span>⚡ Fix with AI</span>
+                        </button>
+                        <button type="button" class="btn-terminal-action" id="btn-clear-terminal" title="Clear console output">
+                          Clear
+                        </button>
+                      </div>
+                    </div>
+                    <pre class="terminal-body" id="terminal-output-text">Click "Run Code" to execute Python (Pyodide in browser) or JavaScript.</pre>
+                  </div>
+                </div>
+
+                <!-- ── RIGHT SECTION: GEMINI AI CODING ASSISTANT ── -->
+                <div class="ai-assistant-section">
+                  <div class="ai-assistant-header">
+                    <div class="ai-assistant-badge">
+                      <span class="sparkle-icon">✨</span>
+                      <span class="ai-assistant-title">AI CODING ASSISTANT</span>
+                      <span class="ai-model-tag" id="ai-model-tag">Gemini 3.6 Flash</span>
+                    </div>
+                    <div class="ai-assistant-actions">
+                      <button type="button" class="btn-ai-header" id="btn-clear-chat" title="Clear discussion history">
+                        Clear Chat
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="ai-context-indicator" id="ai-context-indicator">
+                    <span class="context-pill" id="context-lang-pill">Python</span>
+                    <span class="context-desc" id="context-desc">Full editor code is attached to AI prompts automatically</span>
+                  </div>
+
+                  <!-- Chat Discussion History -->
+                  <div class="ai-chat-thread" id="ai-chat-thread">
+                    <div class="ai-msg ai-msg--assistant">
+                      <div class="ai-msg-avatar">AI</div>
+                      <div class="ai-msg-content">
+                        <p><strong>Greetings, builder.</strong> I am your AI coding partner inside Write Code Action.</p>
+                        <p>I can help you build games, write algorithms, debug terminal errors, or architect systems. Ask me anything, or pick a starter below:</p>
+                        <div class="ai-prompt-chips">
+                          <button type="button" class="ai-chip" data-prompt="Create a simple text-based adventure game loop with inventory in Python.">Adventure Game Loop</button>
+                          <button type="button" class="ai-chip" data-prompt="Review my current code for edge cases, performance, and cleanest logic.">Review My Code</button>
+                          <button type="button" class="ai-chip" data-prompt="Explain how this code works step by step like a technical director.">Explain Logic</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Chat Input Area -->
+                  <form class="ai-input-form" id="ai-chat-form">
                     <textarea
-                      id="editor-anime"
-                      class="comp-editor"
-                      placeholder="• EPISODE / SCENE PREMISE:&#10;  A rogue mecha pilot encounters an ancient celestial spirit in the neon ruins of Tokyo…&#10;&#10;• CHARACTER VISUAL DESIGN:&#10;  - Hair: Obsidian black with glowing crimson tips&#10;  - Signature weapon: Heavy kinetic katana with vapor exhaust&#10;&#10;• SAKUGA &amp; ANIMATION NOTES:&#10;  - High-framerate fluid sword clash&#10;  - Impact frames with monochromatic black/white flash&#10;&#10;• PLOT BEATS &amp; EMOTIONAL CORE:&#10;  Write out all your anime and animation storyboard ideas here…"
-                      spellcheck="true"
-                      aria-label="Animation and anime composition notebook editor"
+                      id="ai-prompt-input"
+                      class="ai-prompt-textarea"
+                      placeholder="Ask AI to write, fix, or explain code… (Shift+Enter for newline)"
+                      rows="1"
                     ></textarea>
-                  </div>
+                    <button type="submit" class="btn-ai-submit" id="btn-ai-submit" aria-label="Send to AI">
+                      <span>↑</span>
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </section>
 
-                  <div class="comp-page-footer">
-                    <span id="words-anime">0 words</span>
-                    <span>COMPOSITION NOTEBOOK · COLLEGE RULED FOR CREATIVE DIRECTORS</span>
+            <!-- ════════════════════════════════════════════════════════
+                 3. ACTION PANEL (Theatre Script & Animation Notebook)
+                 ════════════════════════════════════════════════════════ -->
+            <section class="db-panel db-panel--action" id="panel-action" aria-label="Action workspace" hidden>
+              <!-- Action Sub-Selector Bar -->
+              <div class="action-subnav-bar">
+                <div class="action-options-group" role="tablist" aria-label="Action formats">
+                  <button type="button" class="action-sub-btn active" id="sub-btn-theatre" role="tab" aria-selected="true" aria-controls="action-view-theatre">
+                    <span class="sub-icon">🎭</span> 1. Theatre Script Writing
+                  </button>
+                  <button type="button" class="action-sub-btn" id="sub-btn-anime" role="tab" aria-selected="false" aria-controls="action-view-anime">
+                    <span class="sub-icon">📓</span> 2. Animation / Anime Composition Notebook
+                  </button>
+                </div>
+                <span class="db-save-status" id="save-action" aria-live="polite"></span>
+              </div>
+
+              <div class="action-views-container">
+                <!-- OPTION 1: THEATRE SCRIPT FORMAT -->
+                <div class="action-view active" id="action-view-theatre" role="tabpanel">
+                  <div class="theatre-stage-wrapper">
+                    <!-- Formatting helper ribbon -->
+                    <div class="theatre-tools">
+                      <span class="tool-label">STAGEPLAY FORMAT:</span>
+                      <button type="button" class="script-tag-btn" data-insert="ACT I&#10;">+ Act</button>
+                      <button type="button" class="script-tag-btn" data-insert="SCENE 1&#10;">+ Scene</button>
+                      <button type="button" class="script-tag-btn" data-insert="[AT RISE: ]&#10;">+ At Rise</button>
+                      <button type="button" class="script-tag-btn" data-insert="CHARACTER NAME&#10;">+ Character</button>
+                      <button type="button" class="script-tag-btn" data-insert="    (stage direction)&#10;">+ Direction</button>
+                      <button type="button" class="script-tag-btn" data-insert="[BLACKOUT / CURTAIN]&#10;">+ Blackout</button>
+                    </div>
+
+                    <div class="theatre-manuscript-card">
+                      <div class="theatre-manuscript-top">
+                        <span class="script-header-title">THEATRICAL PLAYWRITING MANUSCRIPT</span>
+                        <span class="script-header-spec">STANDARD DRAMATISTS FORMAT</span>
+                      </div>
+                      <textarea
+                        id="editor-theatre"
+                        class="theatre-script-editor"
+                        placeholder="ACT I&#10;&#10;SCENE 1&#10;&#10;[AT RISE: Early evening. A warm solitary lamp illuminates a wooden desk cluttering manuscripts and sketches. Silence, except for the rain.]&#10;&#10;ELENA&#10;    (stepping into the circle of light)&#10;We were never meant to keep quiet backstage.&#10;&#10;MARCUS&#10;    (without looking up)&#10;Then read the lines they haven't written yet."
+                        spellcheck="true"
+                        aria-label="Theatre script editor"
+                      ></textarea>
+                      <div class="script-footer">
+                        <span id="words-theatre">0 words</span>
+                        <span>THEATRE FORMAT: DIALOGUE INDENTED · UPPERCASE HEADINGS</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- OPTION 2: COMPOSITION NOTEBOOK FOR ANIME / ANIMATION IDEAS -->
+                <div class="action-view" id="action-view-anime" role="tabpanel" hidden>
+                  <div class="comp-notebook-desk">
+                    <div class="composition-book">
+                      <!-- Classic marbled spine left -->
+                      <div class="comp-spine">
+                        <div class="spine-texture"></div>
+                        <span class="spine-label">WCA · ANIME REEL</span>
+                      </div>
+
+                      <!-- Ruled composition paper inside -->
+                      <div class="comp-page">
+                        <div class="comp-header-box">
+                          <div class="comp-title-line">
+                            <label>SERIES / PROJECT:</label>
+                            <input type="text" id="comp-series-title" class="comp-input" placeholder="e.g. Project Astral Echo (Anime Concept)" />
+                          </div>
+                          <div class="comp-meta-row">
+                            <span>ANIMATION / SAKUGA / BEATS NOTEBOOK</span>
+                            <span id="anime-date-stamp">COMPOSITION VOL. 1</span>
+                          </div>
+                        </div>
+
+                        <div class="comp-ruled-area">
+                          <div class="comp-margin-line"></div>
+                          <textarea
+                            id="editor-anime"
+                            class="comp-editor"
+                            placeholder="• EPISODE / SCENE PREMISE:&#10;  A rogue mecha pilot encounters an ancient celestial spirit in the neon ruins of Tokyo…&#10;&#10;• CHARACTER VISUAL DESIGN:&#10;  - Hair: Obsidian black with glowing crimson tips&#10;  - Signature weapon: Heavy kinetic katana with vapor exhaust&#10;&#10;• SAKUGA &amp; ANIMATION NOTES:&#10;  - High-framerate fluid sword clash&#10;  - Impact frames with monochromatic black/white flash&#10;&#10;• PLOT BEATS &amp; EMOTIONAL CORE:&#10;  Write out all your anime and animation storyboard ideas here…"
+                            spellcheck="true"
+                            aria-label="Animation and anime composition notebook editor"
+                          ></textarea>
+                        </div>
+
+                        <div class="comp-page-footer">
+                          <span id="words-anime">0 words</span>
+                          <span>COMPOSITION NOTEBOOK · COLLEGE RULED FOR CREATIVE DIRECTORS</span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </section>
+
           </div>
+        </section>
 
-        </div>
-      </section>
-
-    </main>
+      </main>
+    </div>
 
     <!-- ════════════════════════════════════════════════════════
-         4. ADMIN DRAWER (Only available for usmanianne30)
+         DIRECTOR'S DRAWER (Only available for usmanianne30)
          ════════════════════════════════════════════════════════ -->
     <aside class="admin-drawer" id="admin-drawer" aria-hidden="true">
       <div class="admin-drawer-overlay" id="admin-overlay"></div>
@@ -350,26 +432,28 @@
       </div>
     </aside>
 
-    <!-- ── Member Writing Inspection Modal (for usmanianne30) ── -->
-    <dialog class="admin-inspect-modal" id="admin-inspect-modal">
-      <div class="inspect-modal-shell">
-        <div class="inspect-modal-header">
+    <!-- Inspection Modal for Director -->
+    <div class="admin-modal" id="admin-inspect-modal" hidden>
+      <div class="admin-modal-backdrop"></div>
+      <div class="admin-modal-card">
+        <div class="admin-modal-header">
           <div>
-            <span class="admin-kicker">Member Draft Inspection</span>
-            <h3 class="inspect-title" id="inspect-member-name">Member Writing</h3>
+            <span class="admin-kicker">Private Member Work</span>
+            <h3 class="admin-modal-title" id="inspect-member-name">Member Name</h3>
           </div>
-          <button type="button" class="inspect-close-btn" id="btn-inspect-close">×</button>
+          <button type="button" class="admin-close-btn" id="btn-inspect-close">×</button>
         </div>
-        <div class="inspect-tabs">
-          <button type="button" class="inspect-tab-btn active" data-inspect-section="write">Write Draft</button>
+        <div class="admin-modal-nav">
+          <button type="button" class="inspect-tab-btn active" data-inspect-section="write">Write (Paper)</button>
+          <button type="button" class="inspect-tab-btn" data-inspect-section="code">Code</button>
           <button type="button" class="inspect-tab-btn" data-inspect-section="action_theatre">Theatre Script</button>
           <button type="button" class="inspect-tab-btn" data-inspect-section="action_anime">Anime Notebook</button>
         </div>
-        <div class="inspect-body">
-          <div class="inspect-content-box" id="inspect-content-text">Loading draft…</div>
+        <div class="admin-modal-content">
+          <pre class="inspect-content-box" id="inspect-content-text">Loading member content…</pre>
         </div>
       </div>
-    </dialog>
+    </div>
 
     <script src="dashboard.js"></script>
   </body>

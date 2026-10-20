@@ -23,6 +23,47 @@ let currentUser = null;
 const loadedSections = new Set();
 const saveTimers = {};
 
+let currentSection = 'write'; // 'write' | 'code' | 'action'
+let currentWorks = [];        // pre-existing works array
+let activeWork = null;         // currently open work object, or null (gallery view)
+let worksSaveTimer = null;
+
+const SECTION_CONFIG = {
+  write: {
+    number: '01',
+    label: 'WRITE',
+    title: 'Your Stories & Worlds',
+    desc: 'Every game begins in the margins. Revisit, continue, or create new stories.',
+    createLabel: 'Create New Story',
+    worksTitle: 'SAVED STORIES',
+    defaultTitle: 'Untitled Story',
+    defaultBody: '',
+    defaultLang: 'plaintext'
+  },
+  code: {
+    number: '02',
+    label: 'CODE',
+    title: 'Your Code & Systems',
+    desc: 'Turn ideas into logic and living rules. Pick up where you left off.',
+    createLabel: 'Create New Code',
+    worksTitle: 'SAVED CODE',
+    defaultTitle: 'Untitled Script',
+    defaultBody: '# Write Code Action — Python Sandbox\n\ndef main():\n    print("Welcome to WCA Code Studio")\n\nif __name__ == "__main__":\n    main()\n',
+    defaultLang: 'python'
+  },
+  action: {
+    number: '03',
+    label: 'ACTION',
+    title: 'Your Scripts & Screenplays',
+    desc: 'Stage your scenes, format your dialogue, and bring your visions alive.',
+    createLabel: 'Create New Script',
+    worksTitle: 'SAVED SCRIPTS',
+    defaultTitle: 'Untitled Scene',
+    defaultBody: 'ACT I\n\nSCENE 1\n\n[AT RISE: Spotlight illuminates the empty stage.]\n\nMARCUS\nWe build what we imagine.\n',
+    defaultLang: 'plaintext'
+  }
+};
+
 // ─── DOM References ──────────────────────────────────────────────────────────
 
 const userAvatar = document.getElementById('user-avatar');
@@ -32,8 +73,31 @@ const btnLogout = document.getElementById('btn-logout');
 const btnAdminToggle = document.getElementById('btn-admin-toggle');
 
 // Main navigation tabs & panels
-const primaryTabs = document.querySelectorAll('.db-tab');
+const primaryTabs = document.querySelectorAll('.db-side-tab, .db-tab');
 const primaryPanels = document.querySelectorAll('.db-panel');
+
+// Sidebar Works elements
+const btnSidebarCreate = document.getElementById('btn-sidebar-create');
+const btnCreateLabel = document.getElementById('btn-create-label');
+const sidebarWorksHeading = document.getElementById('sidebar-works-heading');
+const sidebarWorksCount = document.getElementById('sidebar-works-count');
+const sidebarWorksList = document.getElementById('sidebar-works-list');
+
+// Gallery View elements
+const galleryView = document.getElementById('gallery-view');
+const galleryEyebrow = document.getElementById('gallery-eyebrow');
+const galleryTitle = document.getElementById('gallery-title');
+const galleryDesc = document.getElementById('gallery-desc');
+const btnGalleryCreate = document.getElementById('btn-gallery-create');
+const galleryCreateLabel = document.getElementById('gallery-create-label');
+const worksGrid = document.getElementById('works-grid');
+
+// Editor View elements
+const editorView = document.getElementById('editor-view');
+const btnBackToGallery = document.getElementById('btn-back-to-gallery');
+const workTitleInput = document.getElementById('work-title-input');
+const workSaveStatus = document.getElementById('work-save-status');
+const btnDeleteWork = document.getElementById('btn-delete-work');
 
 // Save indicators
 const saveStatus = {
@@ -189,8 +253,8 @@ async function checkAuth() {
     // Initialize Ace Code Editor
     initAceEditor();
 
-    // Load initial content
-    loadSectionContent('write');
+    // Load initial section and pre-existing works
+    switchPrimaryTab('write');
   } catch (err) {
     console.error('Auth verification failed:', err);
     window.location.href = '/login';
@@ -300,44 +364,373 @@ function scheduleSave(section, text, panelKey, language) {
   }, 1000);
 }
 
-// ─── Primary Tab Navigation (Write, Code, Action) ────────────────────────────
+// ─── Pre-Existing Saved Works Management (Write, Code, Action) ───────────────
+
+function timeAgo(dateString) {
+  if (!dateString) return 'Just now';
+  const now = new Date();
+  const past = new Date(dateString);
+  const diffSec = Math.floor((now - past) / 1000);
+  if (diffSec < 30) return 'Just now';
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDays = Math.floor(diffHr / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return past.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+async function fetchWorksForSection(section) {
+  if (sidebarWorksList) sidebarWorksList.innerHTML = '<div class="db-sidebar-empty">Loading saved works…</div>';
+  if (worksGrid) worksGrid.innerHTML = '<div class="db-sidebar-empty" style="grid-column: 1/-1;">Loading pre-existing works…</div>';
+
+  try {
+    const res = await fetch(`/api/works?section=${section}`);
+    if (!res.ok) throw new Error('Could not load works');
+    const data = await res.json();
+    currentWorks = data.works || [];
+
+    renderSidebarWorksList();
+    renderGalleryGrid();
+  } catch (err) {
+    console.error('fetchWorksForSection error:', err);
+    if (sidebarWorksList) sidebarWorksList.innerHTML = '<div class="db-sidebar-empty">No saved works yet</div>';
+    if (worksGrid) worksGrid.innerHTML = '<div class="db-sidebar-empty" style="grid-column: 1/-1;">No pre-existing works saved yet. Click "+ Create New" to begin!</div>';
+  }
+}
+
+function renderSidebarWorksList() {
+  if (!sidebarWorksList) return;
+  if (sidebarWorksCount) sidebarWorksCount.textContent = currentWorks.length;
+
+  if (!currentWorks.length) {
+    sidebarWorksList.innerHTML = '<div class="db-sidebar-empty">No saved works yet</div>';
+    return;
+  }
+
+  sidebarWorksList.innerHTML = '';
+  currentWorks.forEach(work => {
+    const item = document.createElement('div');
+    const isActive = activeWork && activeWork.id === work.id;
+    item.className = `db-side-work-item ${isActive ? 'active' : ''}`;
+    item.innerHTML = `
+      <div class="db-side-work-info">
+        <div class="db-side-work-title">${escapeHtml(work.title || 'Untitled')}</div>
+        <div class="db-side-work-time">${timeAgo(work.updated_at)}</div>
+      </div>
+      <button class="db-side-delete-btn" title="Delete work">×</button>
+    `;
+
+    item.addEventListener('click', (e) => {
+      if (e.target.closest('.db-side-delete-btn')) return;
+      openWorkInEditor(work);
+    });
+
+    item.querySelector('.db-side-delete-btn')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteWork(work.id, work.title);
+    });
+
+    sidebarWorksList.appendChild(item);
+  });
+}
+
+function renderGalleryGrid() {
+  if (!worksGrid) return;
+  worksGrid.innerHTML = '';
+
+  // 1. "+ Create New" card
+  const createCard = document.createElement('div');
+  createCard.className = 'db-work-card db-work-card--create';
+  createCard.innerHTML = `
+    <div class="db-create-icon">+</div>
+    <div class="db-create-card-text">Create New ${SECTION_CONFIG[currentSection]?.label || 'Work'}</div>
+  `;
+  createCard.addEventListener('click', createNewWork);
+  worksGrid.appendChild(createCard);
+
+  // 2. Pre-existing works cards
+  currentWorks.forEach(work => {
+    const card = document.createElement('div');
+    card.className = 'db-work-card';
+    const preview = work.body ? work.body.slice(0, 140).trim() : 'Empty draft. Click to continue writing…';
+    const badgeText = currentSection === 'code' ? (work.language || 'code') : (SECTION_CONFIG[currentSection]?.label || 'WORK');
+
+    card.innerHTML = `
+      <div>
+        <div class="db-card-meta">
+          <span class="db-card-badge">${badgeText}</span>
+          <span class="db-card-time">${timeAgo(work.updated_at)}</span>
+        </div>
+        <h3 class="db-card-title">${escapeHtml(work.title || 'Untitled')}</h3>
+        <p class="db-card-preview">${escapeHtml(preview)}</p>
+      </div>
+      <div class="db-card-footer">
+        <button class="db-card-btn-open">Open &amp; Revisit ↗</button>
+        <button class="db-card-btn-del" title="Delete work">🗑</button>
+      </div>
+    `;
+
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('.db-card-btn-del')) return;
+      openWorkInEditor(work);
+    });
+
+    card.querySelector('.db-card-btn-del')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteWork(work.id, work.title);
+    });
+
+    worksGrid.appendChild(card);
+  });
+}
+
+async function createNewWork() {
+  const conf = SECTION_CONFIG[currentSection] || SECTION_CONFIG.write;
+  const newWorkData = {
+    section: currentSection,
+    title: conf.defaultTitle,
+    body: conf.defaultBody,
+    language: conf.defaultLang
+  };
+
+  try {
+    const res = await fetch('/api/work/new', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newWorkData)
+    });
+    if (!res.ok) throw new Error('Failed to create work');
+    const result = await res.json();
+    const createdWork = result.work;
+
+    currentWorks.unshift(createdWork);
+    renderSidebarWorksList();
+    renderGalleryGrid();
+
+    openWorkInEditor(createdWork);
+  } catch (err) {
+    console.error('createNewWork error:', err);
+    alert('Could not create new work. Please check your connection.');
+  }
+}
+
+function showGalleryView() {
+  activeWork = null;
+  clearTimeout(worksSaveTimer);
+
+  if (galleryView) {
+    galleryView.hidden = false;
+    galleryView.classList.add('active');
+  }
+  if (editorView) {
+    editorView.hidden = true;
+    editorView.classList.remove('active');
+  }
+
+  renderSidebarWorksList();
+  renderGalleryGrid();
+}
+
+function openWorkInEditor(work) {
+  activeWork = work;
+
+  if (galleryView) {
+    galleryView.hidden = true;
+    galleryView.classList.remove('active');
+  }
+  if (editorView) {
+    editorView.hidden = false;
+    editorView.classList.add('active');
+  }
+
+  if (workTitleInput) workTitleInput.value = work.title || 'Untitled';
+  if (workSaveStatus) {
+    workSaveStatus.textContent = 'saved ✓';
+    workSaveStatus.className = 'db-save-status saved';
+  }
+
+  // Activate the respective panel canvas
+  primaryPanels.forEach(p => {
+    const isTarget = p.id === `panel-${currentSection}`;
+    p.classList.toggle('active', isTarget);
+    p.hidden = !isTarget;
+  });
+
+  if (currentSection === 'write') {
+    if (editorWrite) {
+      editorWrite.value = work.body || '';
+      updateWordCounters();
+      setTimeout(() => editorWrite?.focus(), 60);
+    }
+  } else if (currentSection === 'code') {
+    if (aceEditor) {
+      aceEditor.setValue(work.body || '', -1);
+      if (work.language && codeLangSelect) {
+        codeLangSelect.value = work.language;
+        setAceMode(work.language);
+      }
+      aceEditor.resize();
+      setTimeout(() => aceEditor.focus(), 60);
+    }
+  } else if (currentSection === 'action') {
+    if (activeActionSubTab === 'theatre') {
+      if (editorTheatre) {
+        editorTheatre.value = work.body || '';
+        setTimeout(() => editorTheatre?.focus(), 60);
+      }
+    } else {
+      if (editorAnime) {
+        editorAnime.value = work.body || '';
+        setTimeout(() => editorAnime?.focus(), 60);
+      }
+    }
+    updateWordCounters();
+  }
+
+  renderSidebarWorksList();
+}
+
+async function saveActiveWork() {
+  if (!activeWork) return;
+
+  const title = (workTitleInput ? workTitleInput.value : activeWork.title || 'Untitled').trim();
+  let body = '';
+  let language = 'plaintext';
+
+  if (currentSection === 'write') {
+    body = editorWrite ? editorWrite.value : '';
+  } else if (currentSection === 'code') {
+    body = aceEditor ? aceEditor.getValue() : '';
+    language = codeLangSelect?.value || 'python';
+  } else if (currentSection === 'action') {
+    body = activeActionSubTab === 'theatre' ? (editorTheatre ? editorTheatre.value : '') : (editorAnime ? editorAnime.value : '');
+  }
+
+  if (workSaveStatus) {
+    workSaveStatus.textContent = 'saving…';
+    workSaveStatus.className = 'db-save-status saving';
+  }
+
+  try {
+    const res = await fetch('/api/work/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: activeWork.id,
+        title,
+        body,
+        language
+      })
+    });
+    if (!res.ok) throw new Error('Save failed');
+    const result = await res.json();
+
+    activeWork.title = title;
+    activeWork.body = body;
+    activeWork.language = language;
+    activeWork.updated_at = result.updated_at || new Date().toISOString();
+
+    const idx = currentWorks.findIndex(w => w.id === activeWork.id);
+    if (idx !== -1) currentWorks[idx] = { ...activeWork };
+
+    if (workSaveStatus) {
+      workSaveStatus.textContent = 'saved ✓';
+      workSaveStatus.className = 'db-save-status saved';
+    }
+
+    renderSidebarWorksList();
+  } catch (err) {
+    console.error('saveActiveWork error:', err);
+    if (workSaveStatus) {
+      workSaveStatus.textContent = 'error saving';
+      workSaveStatus.className = 'db-save-status error';
+    }
+  }
+}
+
+function scheduleActiveWorkSave() {
+  if (!activeWork) return;
+  if (workSaveStatus) {
+    workSaveStatus.textContent = 'saving…';
+    workSaveStatus.className = 'db-save-status saving';
+  }
+  clearTimeout(worksSaveTimer);
+  worksSaveTimer = setTimeout(saveActiveWork, 1000);
+}
+
+async function deleteWork(workId, title) {
+  const confirmed = confirm(`Are you sure you want to delete "${title || 'this work'}"?`);
+  if (!confirmed) return;
+
+  try {
+    const res = await fetch('/api/work/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: workId })
+    });
+    if (!res.ok) throw new Error('Failed to delete work');
+
+    currentWorks = currentWorks.filter(w => w.id !== workId);
+
+    if (activeWork && activeWork.id === workId) {
+      showGalleryView();
+    } else {
+      renderSidebarWorksList();
+      renderGalleryGrid();
+    }
+  } catch (err) {
+    console.error('deleteWork error:', err);
+    alert('Could not delete work. Please try again.');
+  }
+}
+
+// ─── Primary Sidebar Tab Navigation (Write, Code, Action) ────────────────────
 
 function switchPrimaryTab(targetPanel) {
+  currentSection = targetPanel;
+
   primaryTabs.forEach(tab => {
     const isTarget = tab.dataset.panel === targetPanel;
     tab.classList.toggle('active', isTarget);
     tab.setAttribute('aria-selected', isTarget ? 'true' : 'false');
   });
 
-  primaryPanels.forEach(panel => {
-    const isTarget = panel.id === `panel-${targetPanel}`;
-    panel.classList.toggle('active', isTarget);
-    panel.hidden = !isTarget;
-  });
-
-  if (targetPanel === 'write') {
-    loadSectionContent('write');
-    setTimeout(() => editorWrite?.focus(), 50);
-  } else if (targetPanel === 'code') {
-    loadSectionContent('code');
-    setTimeout(() => {
-      if (aceEditor) {
-        aceEditor.resize();
-        aceEditor.focus();
-      }
-    }, 50);
-  } else if (targetPanel === 'action') {
-    loadSectionContent(activeActionSubTab === 'theatre' ? 'action_theatre' : 'action_anime');
-    setTimeout(() => {
-      if (activeActionSubTab === 'theatre') editorTheatre?.focus();
-      else editorAnime?.focus();
-    }, 50);
+  const conf = SECTION_CONFIG[targetPanel];
+  if (conf) {
+    if (btnCreateLabel) btnCreateLabel.textContent = conf.createLabel;
+    if (sidebarWorksHeading) sidebarWorksHeading.textContent = conf.worksTitle;
+    if (galleryEyebrow) galleryEyebrow.textContent = `${conf.number} / ${conf.label}`;
+    if (galleryTitle) galleryTitle.textContent = conf.title;
+    if (galleryDesc) galleryDesc.textContent = conf.desc;
+    if (galleryCreateLabel) galleryCreateLabel.textContent = `+ ${conf.createLabel}`;
   }
+
+  showGalleryView();
+  fetchWorksForSection(targetPanel);
 }
 
 primaryTabs.forEach(tab => {
   tab.addEventListener('click', () => switchPrimaryTab(tab.dataset.panel));
 });
+
+// Sidebar & Gallery Create Buttons
+btnSidebarCreate?.addEventListener('click', createNewWork);
+btnGalleryCreate?.addEventListener('click', createNewWork);
+
+// Editor toolbar buttons
+btnBackToGallery?.addEventListener('click', () => {
+  saveActiveWork();
+  showGalleryView();
+});
+
+btnDeleteWork?.addEventListener('click', () => {
+  if (activeWork) deleteWork(activeWork.id, activeWork.title);
+});
+
+workTitleInput?.addEventListener('input', scheduleActiveWorkSave);
 
 // ─── Action Sub-Views (Theatre Script vs Anime Notebook) ─────────────────────
 
@@ -372,16 +765,19 @@ subBtnAnime.addEventListener('click', () => switchActionSubView('anime'));
 editorWrite.addEventListener('input', () => {
   updateWordCounters();
   scheduleSave('write', editorWrite.value, 'write');
+  scheduleActiveWorkSave();
 });
 
 editorTheatre.addEventListener('input', () => {
   updateWordCounters();
   scheduleSave('action_theatre', editorTheatre.value, 'action');
+  scheduleActiveWorkSave();
 });
 
 editorAnime.addEventListener('input', () => {
   updateWordCounters();
   scheduleSave('action_anime', editorAnime.value, 'action');
+  scheduleActiveWorkSave();
 });
 
 // ─── Theatre Script Formatting Chips ─────────────────────────────────────────
@@ -405,6 +801,7 @@ document.querySelectorAll('.script-tag-btn').forEach(btn => {
 
     updateWordCounters();
     scheduleSave('action_theatre', editorTheatre.value, 'action');
+    scheduleActiveWorkSave();
   });
 });
 
@@ -447,6 +844,7 @@ function initAceEditor() {
   aceEditor.session.on('change', () => {
     updateContextDesc();
     scheduleSave('code', aceEditor.getValue(), 'code', codeLangSelect?.value || 'python');
+    scheduleActiveWorkSave();
   });
 }
 

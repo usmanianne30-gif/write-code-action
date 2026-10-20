@@ -19,6 +19,7 @@ const ROOT = __dirname;
 const DATA_DIRECTORY = path.join(ROOT, 'data');
 const USERS_FILE = path.join(DATA_DIRECTORY, 'users.json');
 const CONTENT_FILE = path.join(DATA_DIRECTORY, 'content.json');
+const WORKS_FILE = path.join(DATA_DIRECTORY, 'works.json');
 const ACTIVITY_FILE = path.join(DATA_DIRECTORY, 'activity.json');
 const PORT = Number(process.env.PORT || 4173);
 const PASSWORD_UNIQUENESS_KEY = process.env.PASSWORD_UNIQUENESS_KEY || 'wca-local-secret-key-2026';
@@ -570,6 +571,231 @@ async function handlePostContent(request, response) {
   }
 }
 
+// ─── Data Access: Saved Works (Write, Code, Action) ──────────────────────────
+
+async function readLocalWorks() {
+  try {
+    const raw = await fs.readFile(WORKS_FILE, 'utf8');
+    const list = JSON.parse(raw);
+    return Array.isArray(list) ? list : [];
+  } catch (error) {
+    if (error.code === 'ENOENT') return [];
+    throw error;
+  }
+}
+
+async function saveLocalWorks(works) {
+  await fs.mkdir(DATA_DIRECTORY, { recursive: true });
+  const temporaryFile = `${WORKS_FILE}.tmp`;
+  await fs.writeFile(temporaryFile, JSON.stringify(works, null, 2), 'utf8');
+  await fs.rename(temporaryFile, WORKS_FILE);
+}
+
+async function handleGetWorks(request, response) {
+  const username = cookieUser(request);
+  if (!username) return json(response, 401, { error: 'Not signed in.' });
+
+  const url = new URL(request.url, `http://${request.headers.host}`);
+  const section = url.searchParams.get('section') || 'write';
+
+  try {
+    if (usingSupabase()) {
+      try {
+        const query = `wca_works?username=eq.${encodeURIComponent(username)}&section=eq.${encodeURIComponent(section)}&order=updated_at.desc&select=*`;
+        const res = await supabase(query);
+        if (res.response.ok && Array.isArray(res.body)) {
+          return json(response, 200, { works: res.body });
+        }
+      } catch (err) {
+        console.warn('Supabase handleGetWorks error, falling back to local:', err.message);
+      }
+    }
+
+    const allWorks = await readLocalWorks();
+    const userWorks = allWorks
+      .filter(w => w.username === username && w.section === section)
+      .sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+    return json(response, 200, { works: userWorks });
+  } catch (err) {
+    console.error('handleGetWorks error:', err);
+    return json(response, 500, { error: 'Failed to retrieve works.' });
+  }
+}
+
+async function handleGetSingleWork(request, response) {
+  const username = cookieUser(request);
+  if (!username) return json(response, 401, { error: 'Not signed in.' });
+
+  const url = new URL(request.url, `http://${request.headers.host}`);
+  const id = url.searchParams.get('id');
+  if (!id) return json(response, 400, { error: 'Missing work ID.' });
+
+  try {
+    if (usingSupabase()) {
+      try {
+        const query = `wca_works?id=eq.${encodeURIComponent(id)}&username=eq.${encodeURIComponent(username)}&select=*`;
+        const res = await supabase(query);
+        if (res.response.ok && res.body?.length) {
+          return json(response, 200, { work: res.body[0] });
+        }
+      } catch (err) {
+        console.warn('Supabase handleGetSingleWork error, falling back to local:', err.message);
+      }
+    }
+
+    const allWorks = await readLocalWorks();
+    const work = allWorks.find(w => w.id === id && w.username === username);
+    if (!work) return json(response, 404, { error: 'Work not found.' });
+    return json(response, 200, { work });
+  } catch (err) {
+    console.error('handleGetSingleWork error:', err);
+    return json(response, 500, { error: 'Failed to retrieve work.' });
+  }
+}
+
+async function handleCreateWork(request, response) {
+  const username = cookieUser(request);
+  if (!username) return json(response, 401, { error: 'Not signed in.' });
+
+  let body;
+  try {
+    body = await readJsonBody(request, 500_000);
+  } catch (err) {
+    return json(response, err.status || 400, { error: err.message });
+  }
+
+  const { section = 'write', title = 'Untitled', body: content = '', language = 'plaintext' } = body;
+  const now = new Date().toISOString();
+  const newWork = {
+    id: crypto.randomUUID(),
+    username,
+    section,
+    title: (title || 'Untitled').trim().slice(0, 100),
+    body: content || '',
+    language: language || 'plaintext',
+    created_at: now,
+    updated_at: now
+  };
+
+  try {
+    if (usingSupabase()) {
+      try {
+        const res = await supabase('wca_works', {
+          method: 'POST',
+          headers: { Prefer: 'return=representation' },
+          body: JSON.stringify(newWork)
+        });
+        if (res.response.ok) {
+          const created = res.body?.[0] || newWork;
+          return json(response, 201, { work: created });
+        }
+      } catch (err) {
+        console.warn('Supabase handleCreateWork error, falling back to local:', err.message);
+      }
+    }
+
+    const works = await readLocalWorks();
+    works.unshift(newWork);
+    await saveLocalWorks(works);
+    return json(response, 201, { work: newWork });
+  } catch (err) {
+    console.error('handleCreateWork error:', err);
+    return json(response, 500, { error: 'Failed to create new work.' });
+  }
+}
+
+async function handleSaveWork(request, response) {
+  const username = cookieUser(request);
+  if (!username) return json(response, 401, { error: 'Not signed in.' });
+
+  let body;
+  try {
+    body = await readJsonBody(request, 500_000);
+  } catch (err) {
+    return json(response, err.status || 400, { error: err.message });
+  }
+
+  const { id, title, body: content = '', language } = body;
+  if (!id) return json(response, 400, { error: 'Missing work ID.' });
+
+  const now = new Date().toISOString();
+  const updateFields = {
+    body: content,
+    updated_at: now
+  };
+  if (typeof title === 'string') updateFields.title = title.trim().slice(0, 100) || 'Untitled';
+  if (typeof language === 'string') updateFields.language = language;
+
+  try {
+    if (usingSupabase()) {
+      try {
+        const query = `wca_works?id=eq.${encodeURIComponent(id)}&username=eq.${encodeURIComponent(username)}`;
+        const res = await supabase(query, {
+          method: 'PATCH',
+          headers: { Prefer: 'return=representation' },
+          body: JSON.stringify(updateFields)
+        });
+        if (res.response.ok) {
+          const updated = res.body?.[0] || { id, ...updateFields };
+          return json(response, 200, { ok: true, updated_at: now, work: updated });
+        }
+      } catch (err) {
+        console.warn('Supabase handleSaveWork error, falling back to local:', err.message);
+      }
+    }
+
+    const works = await readLocalWorks();
+    const idx = works.findIndex(w => w.id === id && w.username === username);
+    if (idx === -1) return json(response, 404, { error: 'Work not found.' });
+    works[idx] = { ...works[idx], ...updateFields };
+    await saveLocalWorks(works);
+    return json(response, 200, { ok: true, updated_at: now, work: works[idx] });
+  } catch (err) {
+    console.error('handleSaveWork error:', err);
+    return json(response, 500, { error: 'Failed to save work.' });
+  }
+}
+
+async function handleDeleteWork(request, response) {
+  const username = cookieUser(request);
+  if (!username) return json(response, 401, { error: 'Not signed in.' });
+
+  let body;
+  try {
+    body = await readJsonBody(request, 10_000);
+  } catch (err) {
+    return json(response, err.status || 400, { error: err.message });
+  }
+
+  const { id } = body;
+  if (!id) return json(response, 400, { error: 'Missing work ID.' });
+
+  try {
+    if (usingSupabase()) {
+      try {
+        const query = `wca_works?id=eq.${encodeURIComponent(id)}&username=eq.${encodeURIComponent(username)}`;
+        const res = await supabase(query, {
+          method: 'DELETE',
+          headers: { Prefer: 'return=minimal' }
+        });
+        if (res.response.ok) return json(response, 200, { ok: true });
+      } catch (err) {
+        console.warn('Supabase handleDeleteWork error, falling back to local:', err.message);
+      }
+    }
+
+    let works = await readLocalWorks();
+    const beforeLen = works.length;
+    works = works.filter(w => !(w.id === id && w.username === username));
+    if (works.length === beforeLen) return json(response, 404, { error: 'Work not found.' });
+    await saveLocalWorks(works);
+    return json(response, 200, { ok: true });
+  } catch (err) {
+    console.error('handleDeleteWork error:', err);
+    return json(response, 500, { error: 'Failed to delete work.' });
+  }
+}
+
 /** Admin overview - exclusive to usmanianne30 */
 async function handleAdminOverview(request, response) {
   const username = cookieUser(request);
@@ -919,6 +1145,11 @@ const server = http.createServer(async (request, response) => {
     if (request.method === 'GET'  && pathname === '/api/me')     return await handleGetMe(request, response);
     if (request.method === 'GET'  && pathname === '/api/content') return await handleGetContent(request, response);
     if (request.method === 'POST' && pathname === '/api/content') return await handlePostContent(request, response);
+    if (request.method === 'GET'  && pathname === '/api/works')       return await handleGetWorks(request, response);
+    if (request.method === 'GET'  && pathname === '/api/work')        return await handleGetSingleWork(request, response);
+    if (request.method === 'POST' && pathname === '/api/work/new')    return await handleCreateWork(request, response);
+    if (request.method === 'POST' && pathname === '/api/work/save')   return await handleSaveWork(request, response);
+    if (request.method === 'POST' && pathname === '/api/work/delete') return await handleDeleteWork(request, response);
     if (request.method === 'GET'  && pathname === '/api/admin/overview') return await handleAdminOverview(request, response);
     if (request.method === 'POST' && pathname === '/api/ai/chat') return await handleAIChat(request, response);
     if (request.method === 'POST' && pathname === '/api/code/run') return await handleCodeRun(request, response);

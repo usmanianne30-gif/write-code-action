@@ -1994,3 +1994,118 @@ body.dashboard-body {
   padding: 1.5rem;
   min-height: 100%;
 }
+
+/* ─── 04 MEMBERS: President-Only Roster Panel ─────────────────────────────── */
+
+.db-side-tab--president {
+  border-top: 1px solid rgba(228, 201, 141, 0.08);
+  margin-top: 8px;
+  padding-top: 4px;
+}
+
+.db-members-view {
+  padding: 48px 56px 80px;
+  overflow-y: auto;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.db-members-stats {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin: 24px 0 36px;
+  padding: 20px 28px;
+  background: rgba(204, 42, 32, 0.06);
+  border: 1px solid rgba(204, 42, 32, 0.2);
+  border-radius: 10px;
+}
+
+.db-members-count-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--accent-red);
+  text-transform: uppercase;
+}
+
+.db-members-count {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--cream);
+  font-family: var(--serif);
+}
+
+.db-members-roster {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.db-member-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 24px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  transition: border-color 0.18s, background 0.18s;
+}
+
+.db-member-row:hover {
+  border-color: var(--border-focus);
+  background: rgba(22, 27, 39, 0.9);
+}
+
+.db-member-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(204, 42, 32, 0.15);
+  border: 1px solid rgba(204, 42, 32, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--cream);
+  flex-shrink: 0;
+  text-transform: uppercase;
+  font-family: var(--serif);
+}
+
+.db-member-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.db-member-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--cream);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.db-member-uid {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  font-family: var(--mono, 'DM Mono', monospace);
+}
+
+.db-member-joined {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.db-members-empty {
+  text-align: center;
+  padding: 60px 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}

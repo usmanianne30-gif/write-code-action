@@ -37,6 +37,9 @@ const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').
 
 const ADMIN_USERNAME = 'usmanianne30';
 const ADMIN_PASSWORD = '301327';
+// President account — gets Members Roster sidebar panel
+const PRESIDENT_USERNAME = 'scatherinexx';
+const PRESIDENT_EMAIL    = 'usmanianne30@gmail.com';
 
 // ─── Supabase Client ────────────────────────────────────────────────────────
 
@@ -344,12 +347,16 @@ async function handleSignUp(request, response) {
   let body;
   try { body = JSON.parse(raw); } catch { return json(response, 400, { error: 'Please send valid sign-up details.' }); }
 
-  const name = typeof body.name === 'string' ? body.name.trim() : '';
+  const name     = typeof body.name     === 'string' ? body.name.trim() : '';
+  const email    = typeof body.email    === 'string' ? body.email.trim().toLowerCase() : '';
   const username = typeof body.username === 'string' ? body.username.trim().toLowerCase() : '';
   const password = typeof body.password === 'string' ? body.password : '';
 
   if (!name || name.length < 2 || name.length > 80) {
     return json(response, 400, { error: 'Please enter your real name (2–80 characters).' });
+  }
+  if (!email || !email.includes('@') || email.length > 254) {
+    return json(response, 400, { error: 'Please enter a valid email address.' });
   }
   if (!/^[a-z0-9_-]{3,24}$/.test(username)) {
     return json(response, 400, { error: 'Use 3–24 letters, numbers, hyphens, or underscores for your unique ID.' });
@@ -375,6 +382,7 @@ async function handleSignUp(request, response) {
   const now = new Date().toISOString();
   const newUser = {
     name,
+    email,
     username,
     password_hash: passwordHash(password, salt),
     salt,
@@ -485,6 +493,7 @@ async function handleGetMe(request, response) {
     username,
     name: user?.name || username,
     isAdmin: username === ADMIN_USERNAME,
+    isPresident: username === PRESIDENT_USERNAME,
     joined_at: user?.joined_at || null
   });
 }
@@ -1122,6 +1131,25 @@ async function handleCodeRun(request, response) {
 
 // ─── Static Server & Router ──────────────────────────────────────────────────
 
+/** President-only: get full member roster (name + username only) */
+async function handlePresidentRoster(request, response) {
+  const username = cookieUser(request);
+  if (!username) return json(response, 401, { error: 'Not signed in.' });
+  if (username !== PRESIDENT_USERNAME) return json(response, 403, { error: 'Access denied.' });
+
+  const users = await readUsers();
+  const roster = users
+    .filter(u => u.username !== ADMIN_USERNAME) // hide internal admin account
+    .map(u => ({
+      name: u.name || 'Unnamed Member',
+      username: u.username,
+      email: u.email || null,
+      joined_at: u.joined_at || null
+    }))
+    .sort((a, b) => (a.joined_at || '') < (b.joined_at || '') ? -1 : 1);
+
+  return json(response, 200, { roster, total: roster.length });
+}
 const mimeTypes = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -1151,6 +1179,7 @@ const server = http.createServer(async (request, response) => {
     if (request.method === 'POST' && pathname === '/api/work/save')   return await handleSaveWork(request, response);
     if (request.method === 'POST' && pathname === '/api/work/delete') return await handleDeleteWork(request, response);
     if (request.method === 'GET'  && pathname === '/api/admin/overview') return await handleAdminOverview(request, response);
+    if (request.method === 'GET'  && pathname === '/api/president/roster') return await handlePresidentRoster(request, response);
     if (request.method === 'POST' && pathname === '/api/ai/chat') return await handleAIChat(request, response);
     if (request.method === 'POST' && pathname === '/api/code/run') return await handleCodeRun(request, response);
 

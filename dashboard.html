@@ -51,6 +51,12 @@
             <span class="db-tab-label">ACTION</span>
             <span class="db-active-indicator" aria-hidden="true"></span>
           </button>
+          <!-- 04 MEMBERS: president-only, shown by JS -->
+          <button class="db-side-tab" data-panel="members" id="tab-btn-members" aria-selected="false" hidden>
+            <span class="db-tab-num">04</span>
+            <span class="db-tab-label">MEMBERS</span>
+            <span class="db-active-indicator" aria-hidden="true"></span>
+          </button>
         </nav>
 
         <!-- Sidebar Action: "Create New" Options Button -->
@@ -394,7 +400,25 @@
           </div>
         </section>
 
-      </main>
+  
+        <!-- ════════ MEMBERS ROSTER (President only — 04 MEMBERS) ════════ -->
+        <section class="db-members-view" id="members-view" hidden>
+          <header class="db-gallery-header">
+            <div>
+              <p class="eyebrow">04 / MEMBERS</p>
+              <h1 class="db-gallery-title">Registered Members</h1>
+              <p class="db-gallery-desc">Everyone who has joined Write Code Action. Their name and unique ID.</p>
+            </div>
+          </header>
+          <div class="db-members-stats" id="members-stats">
+            <span class="db-members-count-label">TOTAL MEMBERS</span>
+            <span class="db-members-count" id="members-count">—</span>
+          </div>
+          <div class="db-members-roster" id="members-roster-list">
+            <p class="db-sidebar-empty">Loading member list…</p>
+          </div>
+        </section>
+    </main>
     </div>
 
     <!-- ════════════════════════════════════════════════════════

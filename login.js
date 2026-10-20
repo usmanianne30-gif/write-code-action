@@ -86,13 +86,19 @@ loginForm.addEventListener('submit', async event => {
 // ─── REGISTER SUBMIT ───
 regForm.addEventListener('submit', async event => {
   event.preventDefault();
-  const name = regForm.name.value.trim();
+  const name     = regForm.name.value.trim();
+  const email    = regForm.email ? regForm.email.value.trim().toLowerCase() : '';
   const username = regForm.username.value.trim().toLowerCase();
   const password = regForm.password.value;
   const submitBtn = regForm.querySelector('button[type="submit"]');
 
   if (!name) {
     regFeedback.textContent = 'Please enter your real name.';
+    regFeedback.className = 'form-feedback error';
+    return;
+  }
+  if (!email || !email.includes('@')) {
+    regFeedback.textContent = 'Please enter a valid email address.';
     regFeedback.className = 'form-feedback error';
     return;
   }
@@ -115,7 +121,7 @@ regForm.addEventListener('submit', async event => {
     const res = await fetch('/api/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, username, password })
+      body: JSON.stringify({ name, email, username, password })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Registration failed.');

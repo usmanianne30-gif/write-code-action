@@ -28,6 +28,9 @@ let currentWorks = [];        // pre-existing works array
 let activeWork = null;         // currently open work object, or null (gallery view)
 let worksSaveTimer = null;
 
+// PRESIDENT_USERNAME (mirrored from server, client-side only for UI gating)
+const PRESIDENT_USERNAME_CLIENT = 'scatherinexx';
+
 const SECTION_CONFIG = {
   write: {
     number: '01',
@@ -85,6 +88,11 @@ const sidebarWorksList = document.getElementById('sidebar-works-list');
 
 // Gallery View elements
 const galleryView = document.getElementById('gallery-view');
+
+// Members Roster View (president only)
+const membersView = document.getElementById('members-view');
+const membersRosterList = document.getElementById('members-roster-list');
+const membersCount = document.getElementById('members-count');
 const galleryEyebrow = document.getElementById('gallery-eyebrow');
 const galleryTitle = document.getElementById('gallery-title');
 const galleryDesc = document.getElementById('gallery-desc');
@@ -238,6 +246,11 @@ async function checkAuth() {
 
     if (currentUser.username === 'usmanianne30' || currentUser.isAdmin) {
       btnAdminToggle.hidden = false;
+    }
+    // Reveal 04 MEMBERS tab only for the president account
+    if (currentUser.isPresident) {
+      const membersTab = document.getElementById('tab-btn-members');
+      if (membersTab) membersTab.hidden = false;
     }
 
     const writeDateEl = document.getElementById('write-current-date');
@@ -687,9 +700,70 @@ async function deleteWork(workId, title) {
   }
 }
 
+// u{2500}u{2500}u{2500} 04 MEMBERS: President-Only Roster u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}u{2500}
+
+async function fetchAndRenderRoster() {
+  if (!membersRosterList) return;
+  membersRosterList.innerHTML = '<p class="db-sidebar-empty">Loading membersu{2026}</p>';
+  try {
+    const res = await fetch('/api/president/roster');
+    if (!res.ok) throw new Error('Access denied');
+    const data = await res.json();
+    const roster = data.roster || [];
+    if (membersCount) membersCount.textContent = roster.length;
+    if (!roster.length) {
+      membersRosterList.innerHTML = '<p class="db-members-empty">No members have joined yet.</p>';
+      return;
+    }
+    membersRosterList.innerHTML = '';
+    roster.forEach((member) => {
+      const row = document.createElement('div');
+      row.className = 'db-member-row';
+      const initials = (member.name || 'M').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+      const joinedStr = member.joined_at
+        ? new Date(member.joined_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+        : '';
+      row.innerHTML = `r
+        <div class="db-member-avatar">\</div>
+        <div class="db-member-info">
+          <div class="db-member-name">\</div>
+          <div class="db-member-uid">@\</div>
+        </div>
+        <div class="db-member-joined">\</div>
+      `;
+      membersRosterList.appendChild(row);
+    });
+  } catch (err) {
+    console.error('fetchAndRenderRoster error:', err);
+    membersRosterList.innerHTML = '<p class="db-members-empty">Could not load member list.</p>';
+  }
+}
+
+function showMembersView() {
+  if (galleryView) { galleryView.hidden = true; galleryView.classList.remove('active'); }
+  if (editorView)  { editorView.hidden  = true;  editorView.classList.remove('active'); }
+  if (membersView) { membersView.hidden = false; }
+  fetchAndRenderRoster();
+}
+
 // ─── Primary Sidebar Tab Navigation (Write, Code, Action) ────────────────────
 
 function switchPrimaryTab(targetPanel) {
+  // 04 MEMBERS is president-only: show roster view and return early
+  if (targetPanel === 'members') {
+    currentSection = 'members';
+    primaryTabs.forEach(tab => {
+      const isTarget = tab.dataset.panel === 'members';
+      tab.classList.toggle('active', isTarget);
+      tab.setAttribute('aria-selected', isTarget ? 'true' : 'false');
+    });
+    showMembersView();
+    return;
+  }
+
+  // Hide members view if switching away
+  if (membersView) membersView.hidden = true;
+
   currentSection = targetPanel;
 
   primaryTabs.forEach(tab => {
@@ -702,10 +776,10 @@ function switchPrimaryTab(targetPanel) {
   if (conf) {
     if (btnCreateLabel) btnCreateLabel.textContent = conf.createLabel;
     if (sidebarWorksHeading) sidebarWorksHeading.textContent = conf.worksTitle;
-    if (galleryEyebrow) galleryEyebrow.textContent = `${conf.number} / ${conf.label}`;
+    if (galleryEyebrow) galleryEyebrow.textContent = conf.number + ' / ' + conf.label;
     if (galleryTitle) galleryTitle.textContent = conf.title;
     if (galleryDesc) galleryDesc.textContent = conf.desc;
-    if (galleryCreateLabel) galleryCreateLabel.textContent = `+ ${conf.createLabel}`;
+    if (galleryCreateLabel) galleryCreateLabel.textContent = '+ ' + conf.createLabel;
   }
 
   showGalleryView();

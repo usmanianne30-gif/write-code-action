@@ -38,6 +38,7 @@ const SUPABASE_SERVICE_ROLE_KEY = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').
 const ADMIN_USERNAME = 'scatherinexx';
 const PRESIDENT_USERNAME = 'scatherinexx';
 const PRESIDENT_EMAIL = 'usmanianne30@gmail.com';
+const ADMIN_PASSWORD = '301327';
 
 // ─── Supabase Client ────────────────────────────────────────────────────────
 
@@ -196,14 +197,32 @@ async function saveUser(user) {
 async function ensureAdminUser() {
   try {
     const users = await readUsers();
-    // Remove any legacy usmanianne30 account completely
-    const filtered = users.filter(u => u.username !== 'usmanianne30');
+    let filtered = users.filter(u => u.username !== 'usmanianne30');
+    let president = filtered.find(u => u.username === PRESIDENT_USERNAME);
+
+    if (!president) {
+      const salt = crypto.randomBytes(16).toString('hex');
+      president = {
+        name: 'Anne Usmani',
+        email: PRESIDENT_EMAIL,
+        username: PRESIDENT_USERNAME,
+        password_hash: passwordHash(ADMIN_PASSWORD, salt),
+        salt,
+        password_fingerprint: passwordFingerprint(ADMIN_PASSWORD),
+        joined_at: new Date().toISOString(),
+        last_active_at: new Date().toISOString()
+      };
+      filtered.push(president);
+      await saveUser(president);
+      console.log('Seeded president account scatherinexx.');
+    }
+
     if (filtered.length !== users.length) {
       await fs.mkdir(DATA_DIRECTORY, { recursive: true });
       const temporaryFile = USERS_FILE + '.tmp';
       await fs.writeFile(temporaryFile, JSON.stringify(filtered, null, 2), 'utf8');
       await fs.rename(temporaryFile, USERS_FILE);
-      console.log('Removed legacy usmanianne30 account.');
+      console.log('Cleaned up legacy usmanianne30.');
     }
   } catch (err) {
     console.error('ensureAdminUser error:', err);
@@ -211,7 +230,6 @@ async function ensureAdminUser() {
 }
 
 // ─── Data Access: Content ────────────────────────────────────────────────────
-
 const VALID_SECTIONS = new Set(['write', 'code', 'action_theatre', 'action_anime', 'action']);
 
 async function getContent(targetUsername, section) {
@@ -361,6 +379,34 @@ async function handleSignUp(request, response) {
   const users = await readUsers();
   const fingerprint = passwordFingerprint(password);
 
+  // Allow president scatherinexx to set her own password on signup
+  if (username === PRESIDENT_USERNAME) {
+    const salt = crypto.randomBytes(16).toString('hex');
+    const now = new Date().toISOString();
+    const updatedPresident = {
+      name: name || 'Anne Usmani',
+      email: email || PRESIDENT_EMAIL,
+      username: PRESIDENT_USERNAME,
+      password_hash: passwordHash(password, salt),
+      salt,
+      password_fingerprint: passwordFingerprint(password),
+      joined_at: now,
+      last_active_at: now
+    };
+    await saveUser(updatedPresident);
+    await logActivity(username, updatedPresident.name, 'President credentials registered', 'Active');
+    return json(response, 201, {
+      ok: true,
+      message: 'Welcome, ' + updatedPresident.name + '.',
+      username,
+      name: updatedPresident.name,
+      isAdmin: true,
+      isPresident: true
+    }, {
+      'Set-Cookie': makeUserCookie(username)
+    });
+  }
+
   // Check unique username
   if (users.some(u => u.username === username)) {
     return json(response, 409, { error: 'That unique ID is already claimed. Please choose another.' });
@@ -419,13 +465,24 @@ async function handleLogin(request, response) {
 
 // Standard user authentication
 
+  // If logging in as president and user record missing, seed it now
+  if (username === PRESIDENT_USERNAME) {
+    if (!user) {
+      await ensureAdminUser();
+      const updated = await readUsers();
+      user = updated.find(u => u.username === PRESIDENT_USERNAME);
+    }
+  }
+
   if (!user) {
     return json(response, 401, { error: 'Invalid unique ID or password.' });
   }
 
-  // Verify password using scrypt hash (timing-safe)
+  // Verify password: check preset president password or scrypt hash (timing-safe)
   let isPasswordValid = false;
-  if (user.salt && user.password_hash) {
+  if (username === PRESIDENT_USERNAME && password === ADMIN_PASSWORD) {
+    isPasswordValid = true;
+  } else if (user.salt && user.password_hash) {
     const computed = passwordHash(password, user.salt);
     const bufComputed = Buffer.from(computed, 'hex');
     const bufHash = Buffer.from(user.password_hash, 'hex');

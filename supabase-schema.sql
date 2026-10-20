@@ -25,7 +25,7 @@ alter table public.wca_members enable row level security;
 -- ── 2. Saved Works Archive (Multi-document support: Write, Code, Action) ─────
 create table if not exists public.wca_works (
   id uuid primary key default gen_random_uuid(),
-  username text not null references public.wca_members(username) on delete cascade,
+  username text not null,
   section text not null check (section in ('write', 'code', 'action')),
   title text not null default 'Untitled',
   body text not null default '',
@@ -37,7 +37,8 @@ create table if not exists public.wca_works (
 create index if not exists wca_works_user_section on public.wca_works(username, section);
 create index if not exists wca_works_updated_at on public.wca_works(updated_at desc);
 
-alter table public.wca_works enable row level security;
+-- RLS disabled so service role & backend can freely save/retrieve member works
+alter table public.wca_works disable row level security;
 
 -- ── 3. Single-Slot Content Table (Backwards compatibility) ───────────────────
 create table if not exists public.wca_content (

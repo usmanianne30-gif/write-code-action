@@ -515,7 +515,10 @@ async function createNewWork() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newWorkData)
     });
-    if (!res.ok) throw new Error('Failed to create work');
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.error || ('HTTP ' + res.status));
+    }
     const result = await res.json();
     const createdWork = result.work;
 
@@ -526,7 +529,7 @@ async function createNewWork() {
     openWorkInEditor(createdWork);
   } catch (err) {
     console.error('createNewWork error:', err);
-    alert('Could not create new work. Please check your connection.');
+    alert('Could not create new work: ' + err.message);
   }
 }
 

@@ -567,6 +567,25 @@ async function handlePostContent(request, response) {
 
 // ─── Data Access: Saved Works (Write, Code, Action) ──────────────────────────
 
+/** Helper to stream and parse JSON request body safely */
+async function readJsonBody(request, limit = 500000) {
+  let raw = '';
+  for await (const chunk of request) {
+    raw += chunk;
+    if (raw.length > limit) {
+      const err = new Error('Payload is too large.');
+      err.status = 413;
+      throw err;
+    }
+  }
+  try {
+    return raw ? JSON.parse(raw) : {};
+  } catch (err) {
+    const parseErr = new Error('Invalid JSON payload.');
+    parseErr.status = 400;
+    throw parseErr;
+  }
+}
 async function readLocalWorks() {
   try {
     const raw = await fs.readFile(WORKS_FILE, 'utf8');
